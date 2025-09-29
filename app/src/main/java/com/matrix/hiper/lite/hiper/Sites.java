@@ -9,11 +9,7 @@ import com.matrix.hiper.lite.utils.StringUtils;
 
 import org.yaml.snakeyaml.Yaml;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @SuppressWarnings("ALL")
 public class Sites {
@@ -238,23 +234,40 @@ public class Sites {
         public static IncomingSite parse(String name, String id, String conf) {
             Yaml yaml = new Yaml();
             Map object = yaml.load(conf);
-            HashMap<String, String> pki = (HashMap<String, String>) object.get("pki");
-            String cert = pki.get("cert");
-            String ca = pki.get("ca");
-            String key = pki.get("key");
-            HashMap<String, ArrayList<String>> rawPoint = (HashMap<String, ArrayList<String>>) object.get("point");
-            HashMap<String, ArrayList<String>> tower = (HashMap<String, ArrayList<String>>) object.get("tower");
-            ArrayList<String> hosts = tower.get("hosts");
-            ArrayList<String> dns = (ArrayList<String>) object.get("dns");
-            HashMap<String, ArrayList<String>> relay = (HashMap<String, ArrayList<String>>) object.get("relay");
-            ArrayList<String> relays = relay.get("relays");
+
+            // 处理pki字段（添加空值保护）
+            HashMap<String, String> pki = (HashMap<String, String>) object.getOrDefault("pki", new HashMap<>());
+            String cert = pki.getOrDefault("cert", "");
+            String ca = pki.getOrDefault("ca", "");
+            String key = pki.getOrDefault("key", "");
+
+            // 处理tower字段
+            Map<String, Object> towerMap = (Map<String, Object>) object.getOrDefault("tower", new HashMap<String, Object>(){{
+                put("service", false);
+                put("hosts", new ArrayList<String>());
+            }});
+            ArrayList<String> hosts = (ArrayList<String>) towerMap.getOrDefault("hosts", new ArrayList<>());
+
+            // 处理point字段（添加空值保护）
+            HashMap<String, ArrayList<String>> rawPoint = (HashMap<String, ArrayList<String>>) object.getOrDefault("point", new HashMap<>());
+
+            // 处理dns字段（添加空值保护）
+            ArrayList<String> dns = (ArrayList<String>) object.getOrDefault("dns", new ArrayList<>());
+
+            // 处理relay字段（添加空值保护）
+            Map<String, Object> relayMap = (Map<String, Object>) object.getOrDefault("relay", new HashMap<>());
+            ArrayList<String> relays = (ArrayList<String>) relayMap.getOrDefault("relays", new ArrayList<>());
+
+            // 构建point映射
             HashMap<String, StaticHosts> point = new HashMap<>();
             for (String pointKey : rawPoint.keySet()) {
                 boolean isTower = hosts.contains(pointKey);
                 StaticHosts staticHosts = new StaticHosts(isTower, rawPoint.get(pointKey));
                 point.put(pointKey, staticHosts);
             }
-            Relay relayResult = new Relay(relays.size() > 0 ? true : false, relays);
+
+            Relay relayResult = new Relay(!relays.isEmpty(), relays);
+
             return new IncomingSite(
                     name,
                     id,
@@ -273,7 +286,6 @@ public class Sites {
                     key
             );
         }
-
     }
 
     public static class Site {
@@ -646,8 +658,11 @@ public class Sites {
             return tower;
         }
 
+//        public List<String> getDestinations() {
+//            return destinations;
+//        }
         public List<String> getDestinations() {
-            return destinations;
+            return destinations != null ? destinations : Collections.emptyList();
         }
 
     }
