@@ -22,4 +22,8 @@
     <string name="auto_update_point">Auto Update Configuration</string>
     <string name="log">Hiper Log</string>
     <string name="copy_success">Successfully copied!</string>
+
+    <string name="auto_update_no_url">Note: Automatic updates are not supported for this configuration (synchronization URL is missing).</string>
+    <string name="auto_update_invalid_url">Attention: The synchronization URL format of this configuration is invalid.</string>
+
 </resources>

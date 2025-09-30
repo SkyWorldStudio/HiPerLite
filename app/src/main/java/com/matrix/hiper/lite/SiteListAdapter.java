@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.VpnService;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -125,36 +126,54 @@ public class SiteListAdapter extends BaseAdapter {
             viewHolder.delete.setEnabled(false);
             new Thread(() -> {
                 try {
-                    if (Setting.getSetting(context, site.getName()).isAutoUpdate()) {
+                    boolean autoUpdateEnabled = Setting.getSetting(context, site.getName()).isAutoUpdate();
+                    if (autoUpdateEnabled) {
                         String path = context.getFilesDir().getAbsolutePath() + "/" + site.getName() + "/hiper_config.json";
                         String s = StringUtils.getStringFromFile(path);
                         Sites.IncomingSite incomingSite = new Gson().fromJson(s, Sites.IncomingSite.class);
                         String url = incomingSite.getSyncAddition();
-                        String conf = NetworkUtils.doGet(NetworkUtils.toURL(url));
-                        incomingSite.update(conf);
-                        incomingSite.save(context);
-                    }
-                    activity.runOnUiThread(() -> {
-                        for (Sites.Site si : list) {
-                            if (HiPerVpnService.isRunning(si.getName())) {
-                                Intent intent = new Intent(context, HiPerVpnService.class);
-                                Bundle bundle = new Bundle();
-                                bundle.putBoolean("stop", true);
-                                intent.putExtras(bundle);
-                                activity.startService(intent);
-                                activity.refreshList();
-                                break;
+
+                        // 验证URL是否有效
+                        if (url != null && !url.trim().isEmpty() &&
+                                (url.startsWith("http://") || url.startsWith("https://"))) {
+                            String conf = NetworkUtils.doGet(NetworkUtils.toURL(url));
+                            incomingSite.update(conf);
+                            incomingSite.save(context);
+                        } else {
+                            // 添加小提示 - URL无效
+                            String message;
+                            if (url == null || url.trim().isEmpty()) {
+                                message = context.getString(R.string.auto_update_no_url);
+                            } else {
+                                message = context.getString(R.string.auto_update_invalid_url);
                             }
+
+                            activity.runOnUiThread(() ->
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
                         }
-                        activity.setName(site.getName());
-                        Intent vpnPrepareIntent = VpnService.prepare(context);
-                        if (vpnPrepareIntent != null) {
-                            activity.startActivityForResult(vpnPrepareIntent, START_HIPER_CODE);
+                    }
+
+                activity.runOnUiThread(() -> {
+                    for (Sites.Site si : list) {
+                        if (HiPerVpnService.isRunning(si.getName())) {
+                            Intent intent = new Intent(context, HiPerVpnService.class);
+                            Bundle bundle = new Bundle();
+                            bundle.putBoolean("stop", true);
+                            intent.putExtras(bundle);
+                            activity.startService(intent);
+                            activity.refreshList();
+                            break;
                         }
-                        else {
-                            activity.onActivityResult(START_HIPER_CODE, RESULT_OK, null);
-                        }
-                    });
+                    }
+                    activity.setName(site.getName());
+                    Intent vpnPrepareIntent = VpnService.prepare(context);
+                    if (vpnPrepareIntent != null) {
+                        activity.startActivityForResult(vpnPrepareIntent, START_HIPER_CODE);
+                    }
+                    else {
+                        activity.onActivityResult(START_HIPER_CODE, RESULT_OK, null);
+                    }
+                });
                 } catch (IOException e) {
                     e.printStackTrace();
                     activity.runOnUiThread(() -> {
