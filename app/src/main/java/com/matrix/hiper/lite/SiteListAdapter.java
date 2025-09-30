@@ -35,7 +35,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 public class SiteListAdapter extends BaseAdapter {
@@ -104,35 +103,7 @@ public class SiteListAdapter extends BaseAdapter {
         }
         DateFormat dateFormat = new SimpleDateFormat(context.getString(R.string.time_pattern), Locale.getDefault());
         viewHolder.date.setText(date == null ? site.getCert().getCert().getDetails().getNotAfter() : dateFormat.format(date));
-//        viewHolder.ip.setText(site.getCert().getCert().getDetails().getIps().get(0).split("/")[0]);
-
-        // 替换原来的IP设置代码（当前第107-108行）
-        // viewHolder.ip.setText(site.getCert().getCert().getDetails().getIps().get(0).split("/")[0]);
-
-        // 修改为以下完全安全的代码
-        String ipDisplay = "N/A";
-        try {
-            // 安全检查证书链
-            if (site.getCert() != null &&
-                site.getCert().getCert() != null &&
-                site.getCert().getCert().getDetails() != null) {
-
-                List<String> ips = site.getCert().getCert().getDetails().getIps();
-                // 检查IP列表是否存在且非空
-                if (ips != null && !ips.isEmpty() && ips.get(0) != null) {
-                    String[] ipParts = ips.get(0).split("/");
-                    // 确保split后有内容
-                    if (ipParts.length > 0 && ipParts[0] != null && !ipParts[0].isEmpty()) {
-                        ipDisplay = ipParts[0];
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            ipDisplay = "Error";
-        }
-        viewHolder.ip.setText(ipDisplay);
-
+        viewHolder.ip.setText(site.getCert().getCert().getDetails().getIps().get(0));
         if (HiPerVpnService.isRunning(site.getName())) {
             viewHolder.name.setTextColor(Color.GREEN);
             viewHolder.date.setTextColor(Color.GREEN);
@@ -155,11 +126,11 @@ public class SiteListAdapter extends BaseAdapter {
             new Thread(() -> {
                 try {
                     if (Setting.getSetting(context, site.getName()).isAutoUpdate()) {
-                        String url = "https://cert.mcer.cn/point.yml";
-                        String conf = NetworkUtils.doGet(NetworkUtils.toURL(url));
                         String path = context.getFilesDir().getAbsolutePath() + "/" + site.getName() + "/hiper_config.json";
                         String s = StringUtils.getStringFromFile(path);
                         Sites.IncomingSite incomingSite = new Gson().fromJson(s, Sites.IncomingSite.class);
+                        String url = incomingSite.getSyncAddition();
+                        String conf = NetworkUtils.doGet(NetworkUtils.toURL(url));
                         incomingSite.update(conf);
                         incomingSite.save(context);
                     }

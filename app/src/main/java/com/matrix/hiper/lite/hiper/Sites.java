@@ -2,6 +2,7 @@ package com.matrix.hiper.lite.hiper;
 
 import android.content.Context;
 
+import android.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -9,7 +10,13 @@ import com.matrix.hiper.lite.utils.StringUtils;
 
 import org.yaml.snakeyaml.Yaml;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+// import com.matrix.hiper.lite.utils.LogUtils;
 
 @SuppressWarnings("ALL")
 public class Sites {
@@ -30,7 +37,7 @@ public class Sites {
      * # The following configuration will change at any time.
      * # Please do not configure custom content in the above area.
      * # If you need to adjust the configuration, please modify the menu to manual mode.
-     * point:
+     * points:
      *   "x.x.x.x":
      *     - "ip : port"
      *     - "ip : port"
@@ -52,51 +59,92 @@ public class Sites {
      *     - "ip : port"
      *   "x.x.x.x":
      *     - "ip : port"
-     *
-     * tower:
-     *   hosts:
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
      *
      * dns:
-     *     - "6.6.6.6"
-     *     - "6.7.8.9"
-     *     - "7.7.7.7"
+     *     - "223.5.5.5"
+     *     - "114.114.114.114"
      *
-     * relay:
-     *   relays:
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
-     *     - "x.x.x.x"
      * # --------------------------------------------------------------------------------------
      * #                        WARNING <<< AUTO SYNC AREA
      * # --------------------------------------------------------------------------------------
      */
 
+    public static class PKI {
+        private final String ca;
+        private final String cert;
+        private final String key;
+
+        public PKI() {
+            this("", "", "");
+        }
+
+        public PKI(String ca, String cert, String key) {
+            this.ca = ca;
+            this.cert = cert;
+            this.key = key;
+        }
+    }
+
+    public static class TUN {
+        private final Boolean enable;
+        private final String dev;
+
+        public TUN() {
+            this(true, "tun0");
+        }
+
+        public TUN(Boolean enable, String dev) {
+            this.enable = enable;
+            this.dev = dev;
+        }
+    }
+
+    public static class SYNC {
+        private final String addition;
+        private final String source;
+
+        public SYNC() {
+            this("", "");
+        }
+
+        public SYNC(String addition, String source) {
+            this.addition = addition;
+            this.source = source;
+        }
+    }
+
+    public static class LISTEN {
+        private final Number port;
+
+        public LISTEN() {
+            this(35533);
+        }
+
+        public LISTEN (Number port) {
+            this.port = port;
+        }
+    }
+
+    public static class LOGGING {
+        private final String level;
+
+        public LOGGING() {
+            this("info");
+        }
+
+        public LOGGING (String level) {
+            this.level = level;
+        }
+    }
+
     public static class IncomingSite{
 
         private final String name;
         private final String id;
-        private HashMap<String, StaticHosts> point;
+        private HashMap<String, ArrayList<String>> points;
         private final ArrayList<UnsafeRoute> unsafeRoutes;
         @SerializedName("dns")
         private ArrayList<String> dnsResolvers;
-        private Relay relay;
         private final String cert;
         private final String ca;
         private final int lhDuration;
@@ -105,20 +153,24 @@ public class Sites {
         private final String cipher;
         private final int sortKey;
         private final String logVerbosity;
+        private PKI pki;
+        private final TUN tun;
+        private SYNC sync;
+        private LISTEN listen;
+        private LOGGING logging;
         @Expose(serialize = false)
         private String key;
 
         public IncomingSite() {
-            this("", "", new HashMap<>(), new ArrayList<>(), new ArrayList<>(), new Relay(), "", "", 0, 0, 0, "", 0, "", "");
+            this("", "", new HashMap<>(), new ArrayList<>(), new ArrayList<>(), "", "", 0, 0, 0, "", 0, "", "", new SYNC(), new LISTEN(), new LOGGING());
         }
 
-        public IncomingSite(String name, String id, HashMap<String, StaticHosts> point, ArrayList<UnsafeRoute> unsafeRoutes, ArrayList<String> dnsResolvers, Relay relay, String cert, String ca, int lhDuration, int port, int mtu, String cipher, int sortKey, String logVerbosity, String key) {
+        public IncomingSite(String name, String id, HashMap<String, ArrayList<String>> point, ArrayList<UnsafeRoute> unsafeRoutes, ArrayList<String> dnsResolvers, String cert, String ca, int lhDuration, int port, int mtu, String cipher, int sortKey, String logVerbosity, String key, SYNC sync, LISTEN listen, LOGGING logging) {
             this.name = name;
             this.id = id;
-            this.point = point;
+            this.points = point;
             this.unsafeRoutes = unsafeRoutes;
             this.dnsResolvers = dnsResolvers;
-            this.relay = relay;
             this.cert = cert;
             this.ca = ca;
             this.lhDuration = lhDuration;
@@ -128,18 +180,19 @@ public class Sites {
             this.sortKey = sortKey;
             this.logVerbosity = logVerbosity;
             this.key = key;
+            this.sync = sync;
+            this.pki = new PKI(ca, cert, key);
+            this.tun = new TUN();
+            this.listen = listen;
+            this.logging = logging;
         }
 
-        public void setPoint(HashMap<String, StaticHosts> point) {
-            this.point = point;
+        public void setPoint(HashMap<String, ArrayList<String>> point) {
+            this.points = point;
         }
 
         public void setDnsResolvers(ArrayList<String> dnsResolvers) {
             this.dnsResolvers = dnsResolvers;
-        }
-
-        public void setRelay(Relay relay) {
-            this.relay = relay;
         }
 
         public void setKey(String key) {
@@ -154,8 +207,8 @@ public class Sites {
             return id;
         }
 
-        public HashMap<String, StaticHosts> getPoint() {
-            return point;
+        public HashMap<String, ArrayList<String>> getPoint() {
+            return points;
         }
 
         public ArrayList<UnsafeRoute> getUnsafeRoutes() {
@@ -166,9 +219,6 @@ public class Sites {
             return dnsResolvers;
         }
 
-        public Relay getRelay() {
-            return relay;
-        }
 
         public String getCert() {
             return cert;
@@ -202,6 +252,14 @@ public class Sites {
             return logVerbosity;
         }
 
+        public String getSyncAddition() {
+            return sync.addition;
+        }
+
+        public String getSyncSource() {
+            return sync.source;
+        }
+
         public void save(Context context) {
             String path = context.getFilesDir().getAbsolutePath() + "/" + name + "/hiper_config.json";
             StringUtils.writeFile(path, new Gson().toJson(this));
@@ -211,70 +269,173 @@ public class Sites {
         }
 
         public void update(String conf) {
-            Yaml yaml = new Yaml();
-            Map object = yaml.load(conf);
-            HashMap<String, ArrayList<String>> rawPoint = (HashMap<String, ArrayList<String>>) object.get("point");
-            HashMap<String, ArrayList<String>> tower = (HashMap<String, ArrayList<String>>) object.get("tower");
-            ArrayList<String> hosts = tower.get("hosts");
-            ArrayList<String> dns = (ArrayList<String>) object.get("dns");
-            HashMap<String, ArrayList<String>> relay = (HashMap<String, ArrayList<String>>) object.get("relay");
-            ArrayList<String> relays = relay.get("relays");
-            HashMap<String, StaticHosts> point = new HashMap<>();
-            for (String pointKey : rawPoint.keySet()) {
-                boolean isTower = hosts.contains(pointKey);
-                StaticHosts staticHosts = new StaticHosts(isTower, rawPoint.get(pointKey));
-                point.put(pointKey, staticHosts);
+            if (conf == null || conf.isEmpty()) {
+                return;
             }
-            Relay relayResult = new Relay(relays.size() > 0 ? true : false, relays);
-            this.point = point;
-            this.dnsResolvers = dns;
-            this.relay = relayResult;
+            Yaml yaml = new Yaml();
+            Map<String, Object> object = yaml.load(conf);
+
+            // 安全处理可选的 points 字段
+            Object pointsObj = object.get("points");
+            HashMap<String, ArrayList<String>> newPoints = new HashMap<>();
+
+            if (pointsObj != null) {
+                if (pointsObj instanceof Map) {
+                    Map<?, ?> rawPoints = (Map<?, ?>) pointsObj;
+
+                    for (Map.Entry<?, ?> entry : rawPoints.entrySet()) {
+                        String key = entry.getKey().toString();
+                        Object value = entry.getValue();
+
+                        ArrayList<String> valueList = new ArrayList<>();
+                        if (value instanceof List) {
+                            // 修复：这里将循环变量名改为 listItem
+                            for (Object listItem : (List<?>) value) {
+                                if (listItem instanceof String) {
+                                    valueList.add((String) listItem);
+                                }
+                            }
+                        } else if (value instanceof String) {
+                            valueList.add((String) value);
+                        }
+
+                        newPoints.put(key, valueList);
+                    }
+                } else {
+                    // 如果 points 存在但不是 Map 类型，记录警告
+                    Log.e("IncomingSite", "Unexpected type for 'points' field: " + pointsObj.getClass().getSimpleName());
+                }
+            }
+            this.points = newPoints;
+
+            // 安全处理可选的 dns 字段
+            Object dnsObj = object.get("dns");
+            ArrayList<String> newDns = new ArrayList<>();
+            if (dnsObj != null) {
+                if (dnsObj instanceof List) {
+                    // 修复：这里将循环变量名改为 dnsItem
+                    for (Object dnsItem : (List<?>) dnsObj) {
+                        if (dnsItem instanceof String) {
+                            newDns.add((String) dnsItem);
+                        }
+                    }
+                } else if (dnsObj instanceof String) {
+                    newDns.add((String) dnsObj);
+                }
+            }
+            this.dnsResolvers = newDns;
+
+            // 处理其他可选字段...
+            Object listenObj = object.get("listen");
+            if (listenObj instanceof Map) {
+                HashMap<String, Number> rawListen = (HashMap<String, Number>) listenObj;
+                LISTEN listen = new LISTEN(rawListen.get("port"));
+                this.listen = listen;
+            }
+
+            Object loggingObj = object.get("logging");
+            if (loggingObj instanceof Map) {
+                HashMap<String, String> rawLogging = (HashMap<String, String>) loggingObj;
+                String level = rawLogging.get("level");
+                if (level != null) {
+                    LOGGING logging = new LOGGING(level);
+                    this.logging = logging;
+                }
+            }
         }
 
-        public static IncomingSite parse(String name, String id, String conf) {
+
+        public static IncomingSite parse(String name, String id, String conf, String addition) {
             Yaml yaml = new Yaml();
             Map object = yaml.load(conf);
 
-            // 处理pki字段（添加空值保护）
-            HashMap<String, String> pki = (HashMap<String, String>) object.getOrDefault("pki", new HashMap<>());
-            String cert = pki.getOrDefault("cert", "");
-            String ca = pki.getOrDefault("ca", "");
-            String key = pki.getOrDefault("key", "");
-
-            // 处理tower字段
-            Map<String, Object> towerMap = (Map<String, Object>) object.getOrDefault("tower", new HashMap<String, Object>(){{
-                put("service", false);
-                put("hosts", new ArrayList<String>());
-            }});
-            ArrayList<String> hosts = (ArrayList<String>) towerMap.getOrDefault("hosts", new ArrayList<>());
-
-            // 处理point字段（添加空值保护）
-            HashMap<String, ArrayList<String>> rawPoint = (HashMap<String, ArrayList<String>>) object.getOrDefault("point", new HashMap<>());
-
-            // 处理dns字段（添加空值保护）
-            ArrayList<String> dns = (ArrayList<String>) object.getOrDefault("dns", new ArrayList<>());
-
-            // 处理relay字段（添加空值保护）
-            Map<String, Object> relayMap = (Map<String, Object>) object.getOrDefault("relay", new HashMap<>());
-            ArrayList<String> relays = (ArrayList<String>) relayMap.getOrDefault("relays", new ArrayList<>());
-
-            // 构建point映射
-            HashMap<String, StaticHosts> point = new HashMap<>();
-            for (String pointKey : rawPoint.keySet()) {
-                boolean isTower = hosts.contains(pointKey);
-                StaticHosts staticHosts = new StaticHosts(isTower, rawPoint.get(pointKey));
-                point.put(pointKey, staticHosts);
+            // 修复：添加对 addition 的 null 检查
+            Map additionObject;
+            if (addition == null) {
+                additionObject = new HashMap<>(); // 使用空的 HashMap 作为默认值
+            } else {
+                additionObject = yaml.load(addition);
             }
 
-            Relay relayResult = new Relay(!relays.isEmpty(), relays);
+//            Map additionObject = yaml.load(addition);
+            HashMap<String, String> rawSync = (HashMap<String, String>) object.get("sync");
 
+            // 处理可能为null的rawSync
+            if (rawSync == null) {
+                rawSync = new HashMap<>();
+            }
+            SYNC sync = new SYNC(rawSync.get("addition"), rawSync.get("source"));
+
+//            SYNC sync = new SYNC(rawSync.get("addition"), rawSync.get("source"));
+            HashMap<String, String> rawLogging = (HashMap<String, String>) object.get("logging");
+            if (rawLogging == null) {
+                rawLogging = new HashMap<>();
+                rawLogging.put("level", "error");
+            }
+            LOGGING logging = new LOGGING(rawLogging.get("level"));
+            object.putAll(additionObject);
+            HashMap<String, String> pki = (HashMap<String, String>) object.get("pki");
+            String cert = pki.get("cert");
+            String ca = pki.get("ca");
+            String key = pki.get("key");
+
+
+//            HashMap<String, ArrayList<String>> rawPoint = (HashMap<String, ArrayList<String>>) object.get("points");
+//            ArrayList<String> dns = (ArrayList<String>) object.get("dns");
+            // 安全处理points字段 - 修复关键点
+            HashMap<String, ArrayList<String>> rawPoint = new HashMap<>();
+            Object pointsObj = object.get("points");
+
+            if (pointsObj instanceof Map) {
+                // 正常情况：points是一个映射
+                Map<?, ?> pointsMap = (Map<?, ?>) pointsObj;
+                for (Map.Entry<?, ?> entry : pointsMap.entrySet()) {
+                    String key_1 = entry.getKey().toString();
+
+                    // 处理值可能是单个字符串或字符串列表
+                    ArrayList<String> valueList = new ArrayList<>();
+                    Object value = entry.getValue();
+                    if (value instanceof List) {
+                        for (Object item : (List<?>) value) {
+                            if (item instanceof String) {
+                                valueList.add((String) item);
+                            }
+                        }
+                    } else if (value instanceof String) {
+                        valueList.add((String) value);
+                    }
+
+                    rawPoint.put(key_1, valueList);
+                }
+            }
+            // 如果points不存在或不是Map类型，rawPoint将保持为空HashMap
+
+            // 安全处理dns字段
+            ArrayList<String> dns = new ArrayList<>();
+            Object dnsObj = object.get("dns");
+            if (dnsObj instanceof List) {
+                for (Object item : (List<?>) dnsObj) {
+                    if (item instanceof String) {
+                        dns.add((String) item);
+                    }
+                }
+            } else if (dnsObj instanceof String) {
+                dns.add((String) dnsObj);
+            }
+
+
+            HashMap<String, Number> rawListen = (HashMap<String, Number>) object.get("listen");
+            if (rawListen == null) {
+                rawListen = new HashMap<>();
+                rawListen.put("port", 35533);
+            }
+            LISTEN listen = new LISTEN(rawListen.get("port"));
             return new IncomingSite(
                     name,
                     id,
-                    point,
+                    rawPoint,
                     new ArrayList<>(),
                     dns,
-                    relayResult,
                     cert,
                     ca,
                     0,
@@ -282,8 +443,11 @@ public class Sites {
                     1300,
                     "aes",
                     0,
-                    "info",
-                    key
+                    "error",
+                    key,
+                    sync,
+                    listen,
+                    logging
             );
         }
     }
@@ -292,11 +456,10 @@ public class Sites {
 
         private final String name;
         private final String id;
-        private final HashMap<String, StaticHosts> point;
+        private final HashMap<String, ArrayList<String>> points;
         private final ArrayList<UnsafeRoute> unsafeRoutes;
         @SerializedName("dns")
         private final ArrayList<String> dnsResolvers;
-        private final Relay relay;
         private final CertificateInfo cert;
         private final ArrayList<CertificateInfo> ca;
         private final int lhDuration;
@@ -315,16 +478,15 @@ public class Sites {
         private final String config;
 
         public Site() {
-            this("", "", new HashMap<>(), new ArrayList<>(), new ArrayList<>(), new Relay(), new CertificateInfo(), new ArrayList<>(), 0, 0, 0, "", 0, "", false, "", "", new ArrayList<>(), "");
+            this("", "", new HashMap<>(), new ArrayList<>(), new ArrayList<>(), new CertificateInfo(), new ArrayList<>(), 0, 0, 0, "", 0, "", false, "", "", new ArrayList<>(), "");
         }
 
-        public Site(String name, String id, HashMap<String, StaticHosts> point, ArrayList<UnsafeRoute> unsafeRoutes, ArrayList<String> dnsResolvers, Relay relay, CertificateInfo cert, ArrayList<CertificateInfo> ca, int lhDuration, int port, int mtu, String cipher, int sortKey, String logVerbosity, boolean connected, String status, String logFile, ArrayList<String> errors, String config) {
+        public Site(String name, String id, HashMap<String, ArrayList<String>> point, ArrayList<UnsafeRoute> unsafeRoutes, ArrayList<String> dnsResolvers, CertificateInfo cert, ArrayList<CertificateInfo> ca, int lhDuration, int port, int mtu, String cipher, int sortKey, String logVerbosity, boolean connected, String status, String logFile, ArrayList<String> errors, String config) {
             this.name = name;
             this.id = id;
-            this.point = point;
+            this.points = point;
             this.unsafeRoutes = unsafeRoutes;
             this.dnsResolvers = dnsResolvers;
-            this.relay = relay;
             this.cert = cert;
             this.ca = ca;
             this.lhDuration = lhDuration;
@@ -348,8 +510,8 @@ public class Sites {
             return id;
         }
 
-        public HashMap<String, StaticHosts> getPoint() {
-            return point;
+        public HashMap<String, ArrayList<String>> getPoint() {
+            return points;
         }
 
         public ArrayList<UnsafeRoute> getUnsafeRoutes() {
@@ -360,9 +522,6 @@ public class Sites {
             return dnsResolvers;
         }
 
-        public Relay getRelay() {
-            return relay;
-        }
 
         public CertificateInfo getCert() {
             return cert;
@@ -429,7 +588,7 @@ public class Sites {
             CertificateInfo cert = new CertificateInfo();
             ArrayList<CertificateInfo> ca = new ArrayList<>();
             try {
-                String rawDetails = mobileHiPer.MobileHiPer.parseCerts(incomingSite.cert);
+                String rawDetails = mobile.Mobile.parseCerts(incomingSite.cert);
                 CertificateInfo[] certs = new Gson().fromJson(rawDetails, CertificateInfo[].class);
                 if (certs.length == 0) {
                     errors.add("No certificate found");
@@ -443,7 +602,7 @@ public class Sites {
                 errors.add(e.toString());
             }
             try {
-                String rawCa = mobileHiPer.MobileHiPer.parseCerts(incomingSite.getCa());
+                String rawCa = mobile.Mobile.parseCerts(incomingSite.getCa());
                 CertificateInfo[] caArray = new Gson().fromJson(rawCa, CertificateInfo[].class);
                 ca = new ArrayList<>(Arrays.asList(caArray));
                 boolean hasErrors = false;
@@ -466,7 +625,6 @@ public class Sites {
                     incomingSite.getPoint(),
                     incomingSite.getUnsafeRoutes(),
                     incomingSite.getDnsResolvers(),
-                    incomingSite.getRelay(),
                     cert,
                     ca,
                     incomingSite.getLhDuration(),
@@ -487,33 +645,33 @@ public class Sites {
 
     public static class CertificateDetails {
 
-        private final String name;
+        private final List<String> name;
         private final String notBefore;
         private final String notAfter;
         private final String publicKey;
         private final List<String> groups;
-        private final List<String> ips;
+        private final List<String> network;
         private final List<String> subnets;
         private final boolean isCa;
         private final String issuer;
 
         public CertificateDetails() {
-            this("", "", "", "", new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), false, "");
+            this(new ArrayList<>(), "", "", "", new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), false, "");
         }
 
-        public CertificateDetails(String name, String notBefore, String notAfter, String publicKey, List<String> groups, List<String> ips, List<String> subnets, boolean isCa, String issuer) {
+        public CertificateDetails(List<String> name, String notBefore, String notAfter, String publicKey, List<String> groups, List<String> ips, List<String> subnets, boolean isCa, String issuer) {
             this.name = name;
             this.notBefore = notBefore;
             this.notAfter = notAfter;
             this.publicKey = publicKey;
             this.groups = groups;
-            this.ips = ips;
+            this.network = ips;
             this.subnets = subnets;
             this.isCa = isCa;
             this.issuer = issuer;
         }
 
-        public String getName() {
+        public List<String> getName() {
             return name;
         }
 
@@ -534,7 +692,7 @@ public class Sites {
         }
 
         public List<String> getIps() {
-            return ips;
+            return network;
         }
 
         public List<String> getSubnets() {
@@ -658,11 +816,8 @@ public class Sites {
             return tower;
         }
 
-//        public List<String> getDestinations() {
-//            return destinations;
-//        }
         public List<String> getDestinations() {
-            return destinations != null ? destinations : Collections.emptyList();
+            return destinations;
         }
 
     }

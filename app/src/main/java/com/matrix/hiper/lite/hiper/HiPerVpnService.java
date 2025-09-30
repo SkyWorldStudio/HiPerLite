@@ -24,15 +24,17 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Objects;
 
-import mobileHiPer.CIDR;
+import mobile.CIDR;
+
+// import com.matrix.hiper.lite.utils.LogUtils;
 
 public class HiPerVpnService extends VpnService {
 
-    private static String TAG = "HiPerVpnService";
+    private static String TAG = "VlanLite";
 
     private static boolean running = false;
     private static Sites.Site site = null;
-    private static mobileHiPer.HiPer hiper = null;
+    private static mobile.Bulk hiper = null;
     private static ParcelFileDescriptor vpnInterface = null;
     private NetworkCallback networkCallback = new NetworkCallback();
     private boolean didSleep = false;
@@ -91,7 +93,7 @@ public class HiPerVpnService extends VpnService {
         CIDR ipNet;
 
         try {
-            ipNet = mobileHiPer.MobileHiPer.parseCIDR(site.getCert().getCert().getDetails().getIps().get(0));
+            ipNet = mobile.Mobile.parseCIDR(site.getCert().getCert().getDetails().getIps().get(0));
         } catch (Exception e) {
             announceExit(e.toString());
             return;
@@ -112,7 +114,7 @@ public class HiPerVpnService extends VpnService {
         // Add our unsafe routes
         for (Sites.UnsafeRoute unsafeRoute : site.getUnsafeRoutes()) {
             try {
-                CIDR cidr = mobileHiPer.MobileHiPer.parseCIDR(unsafeRoute.getRoute());
+                CIDR cidr = mobile.Mobile.parseCIDR(unsafeRoute.getRoute());
                 builder.addRoute(cidr.getNetwork(), (int) cidr.getMaskSize());
             } catch (Exception e) {
                 announceExit(e.toString());
@@ -140,7 +142,8 @@ public class HiPerVpnService extends VpnService {
         Handler handler = new Handler();
         new Thread(() -> {
             try {
-                hiper = mobileHiPer.MobileHiPer.newHiPer(site.getConfig(), site.getKey(this), site.getLogFile(), vpnInterface.getFd());
+                // LogUtils.d(site.getConfig());
+                hiper = mobile.Mobile.newBulk(site.getConfig(), site.getLogFile(), vpnInterface.getFd());
                 handler.post(() -> {
                     registerNetworkCallback();
                     //TODO: There is an open discussion around sleep killing tunnels or just changing mobile to tear down stale tunnels
@@ -167,8 +170,8 @@ public class HiPerVpnService extends VpnService {
 
     private void stopVpn() {
         unregisterNetworkCallback();
-        hiper.stop();
         try {
+            hiper.stop();
             vpnInterface.close();
         } catch (IOException e) {
             e.printStackTrace();
