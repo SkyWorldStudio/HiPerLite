@@ -25,5 +25,7 @@
 
     <string name="auto_update_no_url">Note: Automatic updates are not supported for this configuration (synchronization URL is missing).</string>
     <string name="auto_update_invalid_url">Attention: The synchronization URL format of this configuration is invalid.</string>
+    <string name="restart_required_title">Application Restart Required</string>
+    <string name="restart_required_message">To ensure network connection stability, the application will restart automatically</string>
 
 </resources>

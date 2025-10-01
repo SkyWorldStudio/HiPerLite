@@ -1,5 +1,7 @@
 package com.matrix.hiper.lite.hiper;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -11,10 +13,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.VpnService;
-import android.os.Build;
-import android.os.Handler;
-import android.os.ParcelFileDescriptor;
-import android.os.PowerManager;
+import android.os.*;
 import android.system.OsConstants;
 import android.util.Log;
 
@@ -24,7 +23,11 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Objects;
 
+import com.matrix.hiper.lite.MainActivity;
+import com.matrix.hiper.lite.R;
 import mobile.CIDR;
+
+import static com.matrix.hiper.lite.MainActivity.*;
 
 // import com.matrix.hiper.lite.utils.LogUtils;
 
@@ -219,6 +222,9 @@ public class HiPerVpnService extends VpnService {
         running = false;
         site = null;
         announceExit(null);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            MainActivity.showRestartNotification(); // 就这么简单!
+        }, 500);
     }
 
 

@@ -26,5 +26,6 @@
 
     <string name="auto_update_no_url">注意：此配置不支持自动更新（缺少同步URL）</string>
     <string name="auto_update_invalid_url">注意：此配置的同步URL格式无效</string>
-
+    <string name="restart_required_title">应用需要重启</string>
+    <string name="restart_required_message">为了确保网络连接正常，应用将自动重启</string>
 </resources>
