@@ -2,6 +2,7 @@ package com.matrix.hiper.lite;
 
 import static android.app.Activity.RESULT_OK;
 
+import static android.webkit.URLUtil.isValidUrl;
 import static com.matrix.hiper.lite.MainActivity.START_HIPER_CODE;
 
 import android.annotation.SuppressLint;
@@ -48,6 +49,12 @@ public class SiteListAdapter extends BaseAdapter {
         this.context = context;
         this.activity = activity;
         this.list = list;
+    }
+
+    private boolean isValidUrl(String url) {
+        if (url == null || url.trim().isEmpty()) return false;
+        url = url.trim();
+        return url.startsWith("http://") || url.startsWith("https://");
     }
 
     private static class ViewHolder {
@@ -121,6 +128,8 @@ public class SiteListAdapter extends BaseAdapter {
             viewHolder.cancel.setVisibility(View.GONE);
             viewHolder.delete.setEnabled(true);
         }
+
+
         viewHolder.run.setOnClickListener(view1 -> {
             view1.setEnabled(false);
             viewHolder.delete.setEnabled(false);
@@ -130,62 +139,80 @@ public class SiteListAdapter extends BaseAdapter {
                     if (autoUpdateEnabled) {
                         String path = context.getFilesDir().getAbsolutePath() + "/" + site.getName() + "/hiper_config.json";
                         String s = StringUtils.getStringFromFile(path);
+                        if (s == null) {
+                            throw new IOException("Config file missing");
+                        }
+
                         Sites.IncomingSite incomingSite = new Gson().fromJson(s, Sites.IncomingSite.class);
                         String url = incomingSite.getSyncAddition();
+                        // ✅ 修正1: 移除嵌套方法 - 直接内联URL验证逻辑
+                        boolean isValidUrl = url != null && !url.trim().isEmpty() &&
+                                (url.startsWith("http://") ||
+                                        url.startsWith("https://") ||
+                                        url.startsWith("HTTP://") ||
+                                        url.startsWith("HTTPS://"));
 
-                        // 验证URL是否有效
-                        if (url != null && !url.trim().isEmpty() &&
-                                (url.startsWith("http://") || url.startsWith("https://"))) {
-                            String conf = NetworkUtils.doGet(NetworkUtils.toURL(url));
-                            incomingSite.update(conf);
+                        if (isValidUrl) {
+                            String updatedYaml = NetworkUtils.doGet(NetworkUtils.toURL(url));
+
+                            // ✅ 修正2: 确保存储YAML配置
+                            String yamlPath = context.getFilesDir().getAbsolutePath()
+                                    + "/" + site.getName() + "/config.yml";
+                            StringUtils.writeFile(yamlPath, updatedYaml);
+
+                            // 更新Java对象状态
+                            incomingSite.update(updatedYaml);
                             incomingSite.save(context);
                         } else {
-                            // 添加小提示 - URL无效
+                            // ✅ 修正3: 保持原有跳过逻辑 - URL无效时仅显示提示
                             String message;
                             if (url == null || url.trim().isEmpty()) {
                                 message = context.getString(R.string.auto_update_no_url);
                             } else {
                                 message = context.getString(R.string.auto_update_invalid_url);
                             }
-
                             activity.runOnUiThread(() ->
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
                         }
                     }
 
-                activity.runOnUiThread(() -> {
-                    for (Sites.Site si : list) {
-                        if (HiPerVpnService.isRunning(si.getName())) {
-                            Intent intent = new Intent(context, HiPerVpnService.class);
-                            Bundle bundle = new Bundle();
-                            bundle.putBoolean("stop", true);
-                            intent.putExtras(bundle);
-                            activity.startService(intent);
-                            activity.refreshList();
-                            break;
+                    activity.runOnUiThread(() -> {
+                        for (Sites.Site si : list) {
+                            if (HiPerVpnService.isRunning(si.getName())) {
+                                Intent intent = new Intent(context, HiPerVpnService.class);
+                                Bundle bundle = new Bundle();
+                                bundle.putBoolean("stop", true);
+                                intent.putExtras(bundle);
+                                activity.startService(intent);
+                                activity.refreshList();
+                                break;
+                            }
                         }
-                    }
-                    activity.setName(site.getName());
-                    Intent vpnPrepareIntent = VpnService.prepare(context);
-                    if (vpnPrepareIntent != null) {
-                        activity.startActivityForResult(vpnPrepareIntent, START_HIPER_CODE);
-                    }
-                    else {
-                        activity.onActivityResult(START_HIPER_CODE, RESULT_OK, null);
-                    }
-                });
+                        activity.setName(site.getName());
+                        Intent vpnPrepareIntent = VpnService.prepare(context);
+                        if (vpnPrepareIntent != null) {
+                            activity.startActivityForResult(vpnPrepareIntent, START_HIPER_CODE);
+                        }
+                        else {
+                            activity.onActivityResult(START_HIPER_CODE, RESULT_OK, null);
+                        }
+                    });
                 } catch (IOException e) {
                     e.printStackTrace();
                     activity.runOnUiThread(() -> {
-                        Toast.makeText(context, context.getString(R.string.dialog_add_new_instance_error_network), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context,
+                                context.getString(R.string.dialog_add_new_instance_error_network),
+                                Toast.LENGTH_SHORT).show();
+                    });
+                } finally {
+                    activity.runOnUiThread(() -> {
+                        view1.setEnabled(true);
+                        viewHolder.delete.setEnabled(true);
                     });
                 }
-                activity.runOnUiThread(() -> {
-                    view1.setEnabled(true);
-                    viewHolder.delete.setEnabled(true);
-                });
             }).start();
         });
+
         viewHolder.cancel.setOnClickListener(view1 -> {
             Intent intent = new Intent(context, HiPerVpnService.class);
             Bundle bundle = new Bundle();

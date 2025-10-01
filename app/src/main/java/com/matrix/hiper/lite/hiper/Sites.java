@@ -4,12 +4,16 @@ import android.content.Context;
 
 import android.util.Log;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import com.matrix.hiper.lite.utils.FileUtils;
 import com.matrix.hiper.lite.utils.StringUtils;
 
 import org.yaml.snakeyaml.Yaml;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -160,7 +164,7 @@ public class Sites {
         private LOGGING logging;
         @Expose(serialize = false)
         private String key;
-
+//        private String originalYaml;
         public IncomingSite() {
             this("", "", new HashMap<>(), new ArrayList<>(), new ArrayList<>(), "", "", 0, 0, 0, "", 0, "", "", new SYNC(), new LISTEN(), new LOGGING());
         }
@@ -581,8 +585,42 @@ public class Sites {
         }
 
         public static Site fromFile(Context context, String name) {
-            String path = context.getFilesDir().getAbsolutePath() + "/" + name + "/hiper_config.json";
+            String dirPath = context.getFilesDir().getAbsolutePath() + "/" + name;
+
+            // ✅ 修正16: 优先检查YAML是否存在
+            String yamlPath = dirPath + "/config.yml";
+            if (!new File(yamlPath).exists()) {
+                // 尝试从旧JSON恢复
+                String jsonPath = dirPath + "/hiper_config.json";
+                if (new File(jsonPath).exists()) {
+                    String json = StringUtils.getStringFromFile(jsonPath);
+                    if (json != null) {
+                        try {
+                            Gson gson = new Gson();
+                            JsonElement jsonElement = gson.fromJson(json, JsonElement.class);
+                            if (jsonElement.isJsonObject()) {
+                                JsonObject obj = jsonElement.getAsJsonObject();
+                                if (obj.has("originalYaml")) {
+                                    String yaml = obj.get("originalYaml").getAsString();
+                                    if (yaml != null && !yaml.isEmpty()) {
+                                        // 重建YAML文件
+                                        FileUtils.createDirectory(dirPath);
+                                        StringUtils.writeFile(yamlPath, yaml);
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e("Site", "Failed to recover YAML", e);
+                        }
+                    }
+                }
+            }
+
+            // ✅ 修正17: 原有逻辑保持不变
+            String path = dirPath + "/hiper_config.json";
             String s = StringUtils.getStringFromFile(path);
+            if (s == null) return null;
+
             IncomingSite incomingSite = new Gson().fromJson(s, IncomingSite.class);
             ArrayList<String> errors = new ArrayList<>();
             CertificateInfo cert = new CertificateInfo();
@@ -640,6 +678,7 @@ public class Sites {
                     s
             );
         }
+
 
     }
 

@@ -106,13 +106,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String[] ids = new File(getFilesDir().getAbsolutePath()).list();
         if (ids != null) {
             for (String id : ids) {
-                if (new File(getFilesDir().getAbsolutePath() + "/" + id + "/hiper_config.json").exists()) {
+                String configPath = getFilesDir().getAbsolutePath() + "/" + id + "/hiper_config.json";
+                if (new File(configPath).exists()) {
                     Sites.Site site = Sites.Site.fromFile(this, id);
-                    list.add(site);
+                    // 重要：过滤掉空站点
+                    if (site != null) {
+                        list.add(site);
+                    }
                 }
             }
         }
         SiteListAdapter adapter = new SiteListAdapter(this, this, list);
         instanceListView.setAdapter(adapter);
     }
+
 }

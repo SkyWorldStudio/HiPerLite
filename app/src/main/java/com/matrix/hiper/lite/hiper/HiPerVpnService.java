@@ -57,11 +57,21 @@ public class HiPerVpnService extends VpnService {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        if (intent.getExtras().getBoolean("stop")) {
-            stopVpn();
-            return Service.START_NOT_STICKY;
+        if (intent == null) {
+            stopSelf();
+            return START_NOT_STICKY;
         }
+
+        // 优化停止请求处理
+        if (intent.hasExtra("stop") && intent.getBooleanExtra("stop", false)) {
+            stopVpn();
+            return START_NOT_STICKY; // 确保正确返回
+        }
+//        if (intent.getExtras().getBoolean("stop")) {
+//            stopVpn();
+//            return Service.START_NOT_STICKY;
+//        }
+
 
         if (running) {
             //TODO: can we signal failure?
@@ -83,12 +93,41 @@ public class HiPerVpnService extends VpnService {
         return super.onStartCommand(intent, flags, startId);
     }
 
+//    @Override
+//    public void onDestroy() {
+//        stopVpn();
+//        super.onDestroy();
+//    }
+// File: app\src\main\java\com\matrix\hiper\lite\hiper\HiPerVpnService.java
     @Override
     public void onDestroy() {
-        stopVpn();
+        // 只有在服务确实运行时才进行清理
+        if (running || hiper != null || vpnInterface != null) {
+            unregisterNetworkCallback();
+
+            if (hiper != null) {
+                try {
+                    hiper.stop(); // 确保只清理一次
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                hiper = null;
+            }
+
+            if (vpnInterface != null) {
+                try {
+                    vpnInterface.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                vpnInterface = null;
+            }
+
+            running = false;
+            site = null;
+        }
         super.onDestroy();
     }
-
     private void startVpn() {
         CIDR ipNet;
 
@@ -171,15 +210,17 @@ public class HiPerVpnService extends VpnService {
     private void stopVpn() {
         unregisterNetworkCallback();
         try {
-            hiper.stop();
+//            hiper.stop();
             vpnInterface.close();
-        } catch (IOException e) {
+            hiper.stop();
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         running = false;
         site = null;
         announceExit(null);
     }
+
 
     // Used to detect network changes (wifi -> cell or vice versa) and rebinds the udp socket/updates LH
     private void registerNetworkCallback() {
