@@ -225,6 +225,7 @@ public class HiPerVpnService extends VpnService {
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             MainActivity.showRestartNotification(); // 就这么简单!
         }, 500);
+//        stopSelf();
     }
 
 
