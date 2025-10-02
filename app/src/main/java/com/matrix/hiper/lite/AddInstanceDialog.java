@@ -31,7 +31,8 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
     public AddInstanceDialog(@NonNull Context context, AddInstanceCallback callback) {
         super(context);
         setContentView(R.layout.dialog_add_instance);
-        setCancelable(false);
+        // 修复1: 允许通过返回键关闭对话框
+        setCancelable(true);
         this.callback = callback;
         this.handler = new Handler();
 
@@ -46,6 +47,7 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
 
     @Override
     public void onClick(View view) {
+        // 修复2: 正确处理两个按钮的点击事件
         if (view == positive) {
             // 强化连电保护
             positive.setEnabled(false);
@@ -54,36 +56,44 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
 
             new Thread(() -> {
                 try {
-                    if (view == positive) {
-                        String name = editName.getText().toString();
-                        String token = editToken.getText().toString();
-                        if (!name.equals("") && !token.equals("")) {
-                            String path = getContext().getFilesDir().getAbsolutePath() + "/" + name;
-                            if (!new File(path).exists()) {
-                                getConfig(name, token);
-                            } else {
-                                Toast.makeText(getContext(), getContext().getString(R.string.dialog_add_new_instance_warn), Toast.LENGTH_SHORT).show();
-                            }
-                        }
+                    String name = editName.getText().toString().trim();
+                    String token = editToken.getText().toString().trim();
+
+                    if (name.isEmpty() || token.isEmpty()) {
+                        handler.post(() -> {
+                            Toast.makeText(getContext(), "Name and token are required", Toast.LENGTH_SHORT).show();
+                            positive.setEnabled(true);
+                            negative.setEnabled(true);
+                        });
+                        return;
                     }
-                    if (view == negative) {
-                        dismiss();
+
+                    String path = getContext().getFilesDir().getAbsolutePath() + "/" + name;
+                    if (new File(path).exists()) {
+                        handler.post(() -> {
+                            Toast.makeText(getContext(), getContext().getString(R.string.dialog_add_new_instance_warn), Toast.LENGTH_SHORT).show();
+                            positive.setEnabled(true);
+                            negative.setEnabled(true);
+                        });
+                    } else {
+                        getConfig(name, token);
                     }
-                } finally {
-                    // 统一恢复按钮状态
+                } catch (Exception e) {
+                    e.printStackTrace();
                     handler.post(() -> {
                         positive.setEnabled(true);
                         negative.setEnabled(true);
                     });
                 }
-            });
+            }).start();
+        }
+        // 修复3: 正确处理取消按钮点击
+        else if (view == negative) {
+            dismiss();
         }
     }
 
     private void getConfig(String name, String token) {
-        errorText.setVisibility(View.GONE);
-        positive.setEnabled(false);
-        negative.setEnabled(false);
         new Thread(() -> {
             try {
                 String url;
@@ -94,9 +104,11 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
                     url = String.format("https://cert.mcer.cn/%s.yml", token);
                 }
                 String conf = NetworkUtils.doGet(NetworkUtils.toURL(url));
-                if (conf.equals("")) {
+                if (conf.isEmpty()) {
                     handler.post(() -> {
                         Toast.makeText(getContext(), getContext().getString(R.string.dialog_add_new_instance_error_invalid), Toast.LENGTH_SHORT).show();
+                        positive.setEnabled(true);
+                        negative.setEnabled(true);
                     });
                 }
                 else {
@@ -104,28 +116,26 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
                     conf = conf.replaceAll("\u003d", "=");
                     String syncAddition = null;
                     String syncAdditionUrl = mobile.Mobile.getConfigSetting(conf, "sync.addition");
-                    if (syncAdditionUrl != null && !syncAdditionUrl.equals("")) {
+                    if (syncAdditionUrl != null && !syncAdditionUrl.isEmpty()) {
                         syncAddition = NetworkUtils.doGet(NetworkUtils.toURL(syncAdditionUrl));
                     }
                     Sites.IncomingSite incomingSite = Sites.IncomingSite.parse(name, token, conf, syncAddition);
                     incomingSite.save(getContext());
                     handler.post(() -> {
                         callback.onInstanceAdd();
-                        dismiss();
+                        dismiss();  // 确保在成功时关闭对话框
                     });
                 }
             } catch (IOException e) {
                 e.printStackTrace();
                 handler.post(() -> {
-                    errorText.setText(e.toString());
+                    errorText.setText(e.getMessage() != null ? e.getMessage() : e.toString());
                     errorText.setVisibility(View.VISIBLE);
                     Toast.makeText(getContext(), getContext().getString(R.string.dialog_add_new_instance_error_network), Toast.LENGTH_SHORT).show();
+                    positive.setEnabled(true);
+                    negative.setEnabled(true);
                 });
             }
-            handler.post(() -> {
-                positive.setEnabled(true);
-                negative.setEnabled(true);
-            });
         }).start();
     }
 

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.VpnService;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.Toolbar;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.utils.widget.ImageFilterButton;
@@ -98,6 +99,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         refreshList();
     }
+
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_main);
+//
+//        // 移除所有Toolbar相关代码
+//        findViewById(R.id.add_new_instance).setOnClickListener(this);
+//        findViewById(R.id.refresh).setOnClickListener(this);
+//
+//        instanceListView = findViewById(R.id.instance_list);
+//        refreshList();
+//    }
+
 
     public String getName() {
         return name;
