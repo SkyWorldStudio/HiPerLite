@@ -6,12 +6,15 @@ import static android.webkit.URLUtil.isValidUrl;
 import static com.matrix.hiper.lite.MainActivity.START_HIPER_CODE;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.VpnService;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,6 +30,7 @@ import com.google.gson.Gson;
 import com.matrix.hiper.lite.hiper.HiPerVpnService;
 import com.matrix.hiper.lite.hiper.Setting;
 import com.matrix.hiper.lite.hiper.Sites;
+import com.matrix.hiper.lite.utils.ConnectionStateManager;
 import com.matrix.hiper.lite.utils.FileUtils;
 import com.matrix.hiper.lite.utils.NetworkUtils;
 import com.matrix.hiper.lite.utils.StringUtils;
@@ -177,26 +181,35 @@ public class SiteListAdapter extends BaseAdapter {
                     }
 
                     activity.runOnUiThread(() -> {
+                        boolean foundRunning = false;
                         for (Sites.Site si : list) {
                             if (HiPerVpnService.isRunning(si.getName())) {
+                                // ✅ 只保存状态，不要设置activity.name - 由MainActivity处理
+                                ConnectionStateManager.savePendingConnection(context, site.getName());
+
                                 Intent intent = new Intent(context, HiPerVpnService.class);
                                 Bundle bundle = new Bundle();
                                 bundle.putBoolean("stop", true);
                                 intent.putExtras(bundle);
                                 activity.startService(intent);
                                 activity.refreshList();
+                                foundRunning = true;
                                 break;
                             }
                         }
-                        activity.setName(site.getName());
-                        Intent vpnPrepareIntent = VpnService.prepare(context);
-                        if (vpnPrepareIntent != null) {
-                            activity.startActivityForResult(vpnPrepareIntent, START_HIPER_CODE);
-                        }
-                        else {
-                            activity.onActivityResult(START_HIPER_CODE, RESULT_OK, null);
+
+                        if (!foundRunning) {
+                            // 没有运行中的VPN，直接启动（保持不变）
+                            activity.setName(site.getName());
+                            Intent vpnPrepareIntent = VpnService.prepare(context);
+                            if (vpnPrepareIntent != null) {
+                                activity.startActivityForResult(vpnPrepareIntent, START_HIPER_CODE);
+                            } else {
+                                activity.onActivityResult(START_HIPER_CODE, Activity.RESULT_OK, null);
+                            }
                         }
                     });
+
                 } catch (IOException e) {
                     e.printStackTrace();
                     activity.runOnUiThread(() -> {

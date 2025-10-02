@@ -485,6 +485,24 @@ public class Sites {
             this("", "", new HashMap<>(), new ArrayList<>(), new ArrayList<>(), new CertificateInfo(), new ArrayList<>(), 0, 0, 0, "", 0, "", false, "", "", new ArrayList<>(), "");
         }
 
+        public static ArrayList<Site> loadAll(Context context) {
+            ArrayList<Site> list = new ArrayList<>();
+            String[] ids = new File(context.getFilesDir().getAbsolutePath()).list();
+            if (ids != null) {
+                for (String id : ids) {
+                    String configPath = context.getFilesDir().getAbsolutePath() + "/" + id + "/hiper_config.json";
+                    if (new File(configPath).exists()) {
+                        Site site = Site.fromFile(context, id);
+                        if (site != null) {
+                            list.add(site);
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
+
         public Site(String name, String id, HashMap<String, ArrayList<String>> point, ArrayList<UnsafeRoute> unsafeRoutes, ArrayList<String> dnsResolvers, CertificateInfo cert, ArrayList<CertificateInfo> ca, int lhDuration, int port, int mtu, String cipher, int sortKey, String logVerbosity, boolean connected, String status, String logFile, ArrayList<String> errors, String config) {
             this.name = name;
             this.id = id;

@@ -101,7 +101,7 @@ public class HiPerVpnService extends VpnService {
 //        stopVpn();
 //        super.onDestroy();
 //    }
-// File: app\src\main\java\com\matrix\hiper\lite\hiper\HiPerVpnService.java
+
     @Override
     public void onDestroy() {
         // 只有在服务确实运行时才进行清理
@@ -222,9 +222,12 @@ public class HiPerVpnService extends VpnService {
         running = false;
         site = null;
         announceExit(null);
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            MainActivity.showRestartNotification(); // 就这么简单!
-        }, 500);
+        if (getApplicationContext() != null) {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                MainActivity.requestRestartNotification(getApplicationContext());
+            }, 2500);
+        }
+        stopSelf();
 //        stopSelf();
     }
 

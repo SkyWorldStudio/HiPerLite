@@ -1,5 +1,7 @@
 package com.matrix.hiper.lite;
 
+import android.content.Context;
+import android.net.VpnService;
 import android.os.Handler;
 import android.os.Looper;
 import androidx.annotation.Nullable;
@@ -16,6 +18,7 @@ import android.widget.ListView;
 import com.matrix.hiper.lite.hiper.HiPerCallback;
 import com.matrix.hiper.lite.hiper.HiPerVpnService;
 import com.matrix.hiper.lite.hiper.Sites;
+import com.matrix.hiper.lite.utils.ConnectionStateManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -32,11 +35,60 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private String name;
 
+    private void handlePendingConnection() {
+        String pendingSite = ConnectionStateManager.getPendingSite(this);
+        if (pendingSite != null) {
+            // ✅ 清除状态前先验证站点是否存在
+            boolean siteExists = false;
+            String[] ids = new File(getFilesDir().getAbsolutePath()).list();
+            if (ids != null) {
+                for (String id : ids) {
+                    if (id.equals(pendingSite)) {
+                        siteExists = true;
+                        break;
+                    }
+                }
+            }
+
+            if (siteExists) {
+                setName(pendingSite);
+
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    // ✅ 添加额外检查：确保没有其他VPN正在运行
+                    boolean anyRunning = false;
+                    for (Sites.Site site : Sites.Site.loadAll(this)) {
+                        if (HiPerVpnService.isRunning(site.getName())) {
+                            anyRunning = true;
+                            break;
+                        }
+                    }
+
+                    if (!anyRunning) {
+                        Intent vpnPrepareIntent = VpnService.prepare(this);
+                        if (vpnPrepareIntent != null) {
+                            startActivityForResult(vpnPrepareIntent, START_HIPER_CODE);
+                        } else {
+                            onActivityResult(START_HIPER_CODE, Activity.RESULT_OK, null);
+                        }
+                    }
+                    ConnectionStateManager.clearState(this);
+                }, 500);
+            } else {
+                // 站点已被删除，清除状态
+                ConnectionStateManager.clearState(this);
+            }
+        }
+    }
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         instance = this;
         setContentView(R.layout.activity_main);
+
+        // ✅ 检查待连接状态
+        handlePendingConnection();
 
         addNewInstance = findViewById(R.id.add_new_instance);
         refresh = findViewById(R.id.refresh);
@@ -45,6 +97,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         instanceListView = findViewById(R.id.instance_list);
 
         refreshList();
+    }
+
+    public String getName() {
+        return name;
     }
 
     @Override
@@ -76,8 +132,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == START_HIPER_CODE && resultCode == Activity.RESULT_OK && name != null) {
+            // ✅ 连接成功后清除待连接状态
+            ConnectionStateManager.clearState(this);
+
             activeServiceName = name;
             Intent intent = new Intent(this, HiPerVpnService.class);
+
             HiPerVpnService.setHiPerCallback(new HiPerCallback() {
                 @Override
                 public void run(int code) {
@@ -142,32 +202,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         instanceListView.setAdapter(adapter);
     }
 
+    public static void requestRestartNotification(Context context) {
+        Intent intent = new Intent(context, RestartNotificationActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+                Intent.FLAG_ACTIVITY_CLEAR_TASK |
+                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+        context.startActivity(intent);
+    }
 
     // ✅ 修复: 将方法改为 public static (关键修复)
-    public static void showRestartNotification() {
-        // 使用静态实例引用
-        MainActivity activity = instance;
-        if (activity != null && !activity.isFinishing()) {
-            activity.runOnUiThread(() -> {
-                new AlertDialog.Builder(activity)
-                        .setTitle(R.string.restart_required_title)
-                        .setMessage(R.string.restart_required_message)
-                        .setCancelable(false)
-                        .show();
-                // 1.5秒后自动重启
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    Intent intent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
-                    if (intent != null) {
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                                Intent.FLAG_ACTIVITY_NEW_TASK |
-                                Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        activity.startActivity(intent);
-                        android.os.Process.killProcess(android.os.Process.myPid());
-                    }
-                }, 1500);
-            });
-        }
-    }
+//    public static void showRestartNotification() {
+//        MainActivity activity = instance;
+//        if (activity != null && !activity.isFinishing()) {
+//            activity.runOnUiThread(() -> {
+//                // ✅ 移除这里的状态保存 - 状态已在SiteListAdapter中保存
+//                new AlertDialog.Builder(activity)
+//                        .setTitle(R.string.restart_required_title)
+//                        .setMessage(R.string.restart_required_message)
+//                        .setCancelable(false)
+//                        .show();
+//
+//                // 1.5秒后自动重启
+//                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+//                    Intent intent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
+////                    Intent intent = activity.getPackageManager()
+////                            .getLaunchIntentForPackage(activity.getPackageName());
+//                    if (intent != null) {
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP |
+//                                Intent.FLAG_ACTIVITY_NEW_TASK |
+//                                Intent.FLAG_ACTIVITY_CLEAR_TASK);
+//                        activity.startActivity(intent);
+//                        android.os.Process.killProcess(android.os.Process.myPid());
+//                    }
+//                }, 1500);
+//            });
+//        }
+//    }
+
+
     private void restartApp() {
         Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (intent != null) {
