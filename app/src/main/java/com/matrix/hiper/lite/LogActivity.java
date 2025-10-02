@@ -3,6 +3,8 @@ package com.matrix.hiper.lite;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.ProgressBar;
@@ -33,6 +35,7 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
     private ProgressBar progressBar;
     private ImageFilterButton refresh;
     private ImageFilterButton copy;
+    private ProgressBar copyProgress;
     private AppCompatTextView log;
 
     @Override
@@ -60,19 +63,27 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
 
         log = findViewById(R.id.log);
         refreshLog();
+
+        copy = findViewById(R.id.copy);
+        copyProgress = findViewById(R.id.copy_progress); // 绑定进度条
+
+        // 初始化状态
+        copyProgress.setVisibility(View.GONE);
+        copy.setOnClickListener(this);
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+        // 1111
         if (hasFocus) {
-            getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+//            getWindow().getDecorView().setSystemUiVisibility(
+//                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+//                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+//                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+//                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+//                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+//                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
 
@@ -89,10 +100,22 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
             refreshLog();
         }
         if (view == copy) {
-            ClipboardManager clip = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            ClipData data = ClipData.newPlainText(null, log.getText().toString());
-            clip.setPrimaryClip(data);
-            Toast.makeText(this, getString(R.string.copy_success), Toast.LENGTH_SHORT).show();
+            // 启用连电保护：禁用按钮 + 显示进度动画
+            copy.setEnabled(false);
+            copyProgress.setVisibility(View.VISIBLE);
+
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                try {
+                    ClipboardManager clip = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                    ClipData data = ClipData.newPlainText(null, log.getText().toString());
+                    clip.setPrimaryClip(data);
+                    Toast.makeText(this, getString(R.string.copy_success), Toast.LENGTH_SHORT).show();
+                } finally {
+                    // 操作完成后恢复按钮状态
+                    copy.setEnabled(true);
+                    copyProgress.setVisibility(View.GONE);
+                }
+            }, 100); // 短暂延迟确保UI更新
         }
     }
 

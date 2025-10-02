@@ -47,20 +47,36 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
     @Override
     public void onClick(View view) {
         if (view == positive) {
-            String name = editName.getText().toString();
-            String token = editToken.getText().toString();
-            if (!name.equals("") && !token.equals("")) {
-                String path = getContext().getFilesDir().getAbsolutePath() + "/" + name;
-                if (!new File(path).exists()) {
-                    getConfig(name, token);
+            // 强化连电保护
+            positive.setEnabled(false);
+            negative.setEnabled(false);
+            errorText.setVisibility(View.GONE);
+
+            new Thread(() -> {
+                try {
+                    if (view == positive) {
+                        String name = editName.getText().toString();
+                        String token = editToken.getText().toString();
+                        if (!name.equals("") && !token.equals("")) {
+                            String path = getContext().getFilesDir().getAbsolutePath() + "/" + name;
+                            if (!new File(path).exists()) {
+                                getConfig(name, token);
+                            } else {
+                                Toast.makeText(getContext(), getContext().getString(R.string.dialog_add_new_instance_warn), Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+                    if (view == negative) {
+                        dismiss();
+                    }
+                } finally {
+                    // 统一恢复按钮状态
+                    handler.post(() -> {
+                        positive.setEnabled(true);
+                        negative.setEnabled(true);
+                    });
                 }
-                else {
-                    Toast.makeText(getContext(), getContext().getString(R.string.dialog_add_new_instance_warn), Toast.LENGTH_SHORT).show();
-                }
-            }
-        }
-        if (view == negative) {
-            dismiss();
+            });
         }
     }
 

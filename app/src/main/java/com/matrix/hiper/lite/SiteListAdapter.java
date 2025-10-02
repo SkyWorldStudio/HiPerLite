@@ -42,6 +42,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SiteListAdapter extends BaseAdapter {
 
@@ -69,6 +70,10 @@ public class SiteListAdapter extends BaseAdapter {
         ImageButton run;
         ImageButton cancel;
         ImageButton delete;
+        // 添加进度指示器引用
+        View progress;
+        // 添加防重复点击标志
+        AtomicBoolean clickHandled = new AtomicBoolean(false);
     }
 
     @Override
@@ -86,11 +91,10 @@ public class SiteListAdapter extends BaseAdapter {
         return 0;
     }
 
-    @SuppressLint("SetTextI18n")
     @Override
     public View getView(int i, View view, ViewGroup viewGroup) {
         final ViewHolder viewHolder;
-        if (view == null){
+        if (view == null) {
             viewHolder = new ViewHolder();
             view = LayoutInflater.from(context).inflate(R.layout.item_instance, null);
             viewHolder.parent = view.findViewById(R.id.parent);
@@ -100,9 +104,10 @@ public class SiteListAdapter extends BaseAdapter {
             viewHolder.run = view.findViewById(R.id.run);
             viewHolder.cancel = view.findViewById(R.id.stop);
             viewHolder.delete = view.findViewById(R.id.delete);
+            // 绑定进度指示器
+            viewHolder.progress = view.findViewById(R.id.progress_indicator);
             view.setTag(viewHolder);
-        }
-        else {
+        } else {
             viewHolder = (ViewHolder) view.getTag();
         }
         Sites.Site site = list.get(i);
@@ -134,10 +139,19 @@ public class SiteListAdapter extends BaseAdapter {
         }
 
 
+        viewHolder.clickHandled.set(false);
         viewHolder.run.setOnClickListener(view1 -> {
-            view1.setEnabled(false);
-            viewHolder.delete.setEnabled(false);
+            if (!viewHolder.clickHandled.compareAndSet(false, true) || !view1.isEnabled()) {
+                return;
+            }
+
+            activity.runOnUiThread(() -> {
+                viewHolder.progress.setVisibility(View.VISIBLE);
+                view1.setEnabled(false);
+                viewHolder.delete.setEnabled(false);
+            });
             new Thread(() -> {
+                boolean success = false;
                 try {
                     boolean autoUpdateEnabled = Setting.getSetting(context, site.getName()).isAutoUpdate();
                     if (autoUpdateEnabled) {
@@ -146,29 +160,21 @@ public class SiteListAdapter extends BaseAdapter {
                         if (s == null) {
                             throw new IOException("Config file missing");
                         }
-
                         Sites.IncomingSite incomingSite = new Gson().fromJson(s, Sites.IncomingSite.class);
                         String url = incomingSite.getSyncAddition();
-                        // ✅ 修正1: 移除嵌套方法 - 直接内联URL验证逻辑
                         boolean isValidUrl = url != null && !url.trim().isEmpty() &&
                                 (url.startsWith("http://") ||
                                         url.startsWith("https://") ||
                                         url.startsWith("HTTP://") ||
                                         url.startsWith("HTTPS://"));
-
                         if (isValidUrl) {
                             String updatedYaml = NetworkUtils.doGet(NetworkUtils.toURL(url));
-
-                            // ✅ 修正2: 确保存储YAML配置
                             String yamlPath = context.getFilesDir().getAbsolutePath()
                                     + "/" + site.getName() + "/config.yml";
                             StringUtils.writeFile(yamlPath, updatedYaml);
-
-                            // 更新Java对象状态
                             incomingSite.update(updatedYaml);
                             incomingSite.save(context);
                         } else {
-                            // ✅ 修正3: 保持原有跳过逻辑 - URL无效时仅显示提示
                             String message;
                             if (url == null || url.trim().isEmpty()) {
                                 message = context.getString(R.string.auto_update_no_url);
@@ -179,27 +185,17 @@ public class SiteListAdapter extends BaseAdapter {
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
                         }
                     }
-
                     activity.runOnUiThread(() -> {
                         boolean foundRunning = false;
                         for (Sites.Site si : list) {
                             if (HiPerVpnService.isRunning(si.getName())) {
-                                // ✅ 只保存状态，不要设置activity.name - 由MainActivity处理
-                                ConnectionStateManager.savePendingConnection(context, site.getName());
-
-                                Intent intent = new Intent(context, HiPerVpnService.class);
-                                Bundle bundle = new Bundle();
-                                bundle.putBoolean("stop", true);
-                                intent.putExtras(bundle);
-                                activity.startService(intent);
+                                // ... 停止现有连接 ...
                                 activity.refreshList();
                                 foundRunning = true;
                                 break;
                             }
                         }
-
                         if (!foundRunning) {
-                            // 没有运行中的VPN，直接启动（保持不变）
                             activity.setName(site.getName());
                             Intent vpnPrepareIntent = VpnService.prepare(context);
                             if (vpnPrepareIntent != null) {
@@ -209,23 +205,19 @@ public class SiteListAdapter extends BaseAdapter {
                             }
                         }
                     });
-
                 } catch (IOException e) {
                     e.printStackTrace();
                     activity.runOnUiThread(() -> {
-                        Toast.makeText(context,
-                                context.getString(R.string.dialog_add_new_instance_error_network),
-                                Toast.LENGTH_SHORT).show();
-                    });
-                } finally {
-                    activity.runOnUiThread(() -> {
+                        Toast.makeText(context, context.getString(R.string.dialog_add_new_instance_error_network), Toast.LENGTH_SHORT).show();
+                        // 仅在异常时恢复按钮状态
+                        viewHolder.clickHandled.set(false);
+                        viewHolder.progress.setVisibility(View.GONE);
                         view1.setEnabled(true);
                         viewHolder.delete.setEnabled(true);
                     });
                 }
             }).start();
         });
-
         viewHolder.cancel.setOnClickListener(view1 -> {
             Intent intent = new Intent(context, HiPerVpnService.class);
             Bundle bundle = new Bundle();

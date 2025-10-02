@@ -117,13 +117,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
-            getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+//            getWindow().getDecorView().setSystemUiVisibility(
+//                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+//                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+//                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+//                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+//                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+//                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
 
@@ -154,6 +154,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         builder.setPositiveButton("OK", null);
                         builder.create().show();
                     }
+                    // 关键修复：无论是否出错，都刷新列表重置按钮状态
+                    refreshList();
                 }
             });
             Bundle bundle = new Bundle();
@@ -171,13 +173,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View view) {
         if (view == addNewInstance) {
-            AddInstanceDialog dialog = new AddInstanceDialog(this, this::refreshList);
+            // 添加连电保护
+            addNewInstance.setEnabled(false);
+            AddInstanceDialog dialog = new AddInstanceDialog(this, () -> {
+                refreshList();
+                // 操作完成后恢复按钮状态
+                addNewInstance.post(() -> addNewInstance.setEnabled(true));
+            });
+            dialog.setOnDismissListener(d ->
+                    addNewInstance.post(() -> addNewInstance.setEnabled(true))
+            );
             dialog.show();
         }
         if (view == refresh) {
-            refreshList();
+            // 添加连电保护
+            refresh.setEnabled(false);
+            try {
+                refreshList();
+            } finally {
+                refresh.post(() -> refresh.setEnabled(true));
+            }
         }
     }
+
 
     public void setName(String name) {
         this.name = name;
