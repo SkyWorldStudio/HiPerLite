@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import com.matrix.hiper.lite.hiper.HiPerVpnService;
 import com.matrix.hiper.lite.hiper.Setting;
 import com.matrix.hiper.lite.hiper.Sites;
+import com.matrix.hiper.lite.utils.ConnectionStateManager;
 import com.matrix.hiper.lite.utils.StringUtils;
 
 public class LogActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener, View.OnClickListener {
@@ -153,6 +154,9 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
 
         Toast.makeText(this, "Log level updated to " + level, Toast.LENGTH_SHORT).show();
         if (HiPerVpnService.isRunning(name)) {
+            // 新增：保存待连接状态，确保重启后能自动重连
+            ConnectionStateManager.savePendingConnection(this, name);
+
             IntentFilter filter = new IntentFilter("com.matrix.hiper.lite.SERVICE_STOPPED");
             stopReceiver = new BroadcastReceiver() {
                 @Override
@@ -168,7 +172,7 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
             Intent stopIntent = new Intent(this, HiPerVpnService.class);
             Bundle bundle = new Bundle();
             bundle.putBoolean("stop", true);
-            bundle.putBoolean("restart_app", false);
+            bundle.putBoolean("restart_app", true);
             bundle.putBoolean("send_stop_broadcast", true);
             stopIntent.putExtras(bundle);
             startService(stopIntent);
@@ -184,42 +188,63 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
     }
 
     private void startServiceWithDelay(String name) {
-        // 7. 增加延迟时间至 3000ms 确保Go运行时完全停止
+        // 1. 先显示"Pausing Server..." Toast
+        Toast.makeText(this, R.string.restart_required_message_ing, Toast.LENGTH_LONG).show();
+
+        // 2. 关键修改：不尝试重启服务，而是直接准备重启应用
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            try {
-                // 8. 启动新服务
-                Intent startIntent = new Intent(this, HiPerVpnService.class);
-                Bundle startBundle = new Bundle();
-                startBundle.putString("name", name);
-                startBundle.putBoolean("restart_app", false);
-                startIntent.putExtras(startBundle);
-                startService(startIntent);
+            // 3. 确保Toast有足够时间显示（LENGTH_LONG约3500ms）
+            MainActivity.requestRestartNotification(this);
 
-                // 9. 添加服务启动确认
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    runOnUiThread(() -> {
-                        logLevelSpinner.setEnabled(true);
-                        copy.setEnabled(true);
-                        refresh.setEnabled(true);
-                        isRestarting = false;
-
-                        // 10. 刷新日志显示新配置
-                        refreshLog();
-                    });
-                }, 1000);
-            } catch (Exception e) {
-                e.printStackTrace();
-                // 11. 错误恢复
-                runOnUiThread(() -> {
-                    logLevelSpinner.setEnabled(true);
-                    copy.setEnabled(true);
-                    refresh.setEnabled(true);
-                    isRestarting = false;
-                    Toast.makeText(this, "Failed to restart service", Toast.LENGTH_SHORT).show();
-                });
-            }
-        }, 3000); // 从1500ms增加到3000ms
+            // 4. 立即禁用UI防止用户交互
+            runOnUiThread(() -> {
+                logLevelSpinner.setEnabled(false);
+                copy.setEnabled(false);
+                refresh.setEnabled(false);
+                isRestarting = true;
+            });
+        }, 1500); // 1.5秒延迟 - 让Toast先显示
     }
+
+
+//    private void startServiceWithDelay(String name) {
+//        // 7. 增加延迟时间至 3000ms 确保Go运行时完全停止
+//        Toast.makeText(this, R.string.restart_required_message_ing, Toast.LENGTH_LONG).show();
+//        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+//            try {
+//                // 8. 启动新服务
+//                Intent startIntent = new Intent(this, HiPerVpnService.class);
+//                Bundle startBundle = new Bundle();
+//                startBundle.putString("name", name);
+//                startBundle.putBoolean("restart_app", false);
+//                startIntent.putExtras(startBundle);
+//                startService(startIntent);
+//
+//                // 9. 添加服务启动确认
+//                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+//                    runOnUiThread(() -> {
+//                        logLevelSpinner.setEnabled(true);
+//                        copy.setEnabled(true);
+//                        refresh.setEnabled(true);
+//                        isRestarting = false;
+//
+//                        // 10. 刷新日志显示新配置
+//                        refreshLog();
+//                    });
+//                }, 1000);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                // 11. 错误恢复
+//                runOnUiThread(() -> {
+//                    logLevelSpinner.setEnabled(true);
+//                    copy.setEnabled(true);
+//                    refresh.setEnabled(true);
+//                    isRestarting = false;
+//                    Toast.makeText(this, "Failed to restart service", Toast.LENGTH_SHORT).show();
+//                });
+//            }
+//        }, 1500); // 从1500ms增加到3000ms
+//    }
 
     @Override
     protected void onDestroy() {

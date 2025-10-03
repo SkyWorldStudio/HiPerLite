@@ -27,6 +27,8 @@
     <string name="auto_update_invalid_url">Attention: The synchronization URL format of this configuration is invalid.</string>
     <string name="restart_required_title">Application Restart Required</string>
     <string name="restart_required_message">To ensure network connection stability, the application will restart automatically</string>
+    
+    <string name="restart_required_message_ing">Pausing Server...</string>
 
     <!-- 添加日志级别标签和选项数组 -->
     <string name="log_level">Log Level:</string>

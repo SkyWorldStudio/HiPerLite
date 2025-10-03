@@ -15,12 +15,14 @@ import android.os.*;
 import android.system.OsConstants;
 import android.util.Log;
 
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
 import java.util.Objects;
 
 import com.matrix.hiper.lite.MainActivity;
+import com.matrix.hiper.lite.R;
 import mobile.CIDR;
 
 
@@ -204,7 +206,7 @@ public class HiPerVpnService extends VpnService {
         } catch (Throwable e) {
             e.printStackTrace();
         } finally {
-            // 使用lastIntent而不是getIntent()
+            // 仅当明确要求重启应用时才发送广播
             if (lastIntent != null && lastIntent.getBooleanExtra("send_stop_broadcast", false)) {
                 Intent broadcastIntent = new Intent(ACTION_SERVICE_STOPPED);
                 sendBroadcast(broadcastIntent);
@@ -213,13 +215,17 @@ public class HiPerVpnService extends VpnService {
             running = false;
             site = null;
             announceExit(null);
+
+            // 仅当 shouldRestartApp 为 true 时才重启
             if (shouldRestartApp && getApplicationContext() != null) {
+                Toast.makeText(this, R.string.restart_required_message_ing, Toast.LENGTH_LONG).show();
                 new Handler(Looper.getMainLooper()).postDelayed(() ->
                         MainActivity.requestRestartNotification(getApplicationContext()), 2500);
             }
             stopSelf();
         }
-    }    // Used to detect network changes (wifi -> cell or vice versa) and rebinds the udp socket/updates LH
+    }
+
     private void registerNetworkCallback() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 

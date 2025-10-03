@@ -243,45 +243,4 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         context.startActivity(intent);
     }
 
-    // ✅ 修复: 将方法改为 public static (关键修复)
-//    public static void showRestartNotification() {
-//        MainActivity activity = instance;
-//        if (activity != null && !activity.isFinishing()) {
-//            activity.runOnUiThread(() -> {
-//                // ✅ 移除这里的状态保存 - 状态已在SiteListAdapter中保存
-//                new AlertDialog.Builder(activity)
-//                        .setTitle(R.string.restart_required_title)
-//                        .setMessage(R.string.restart_required_message)
-//                        .setCancelable(false)
-//                        .show();
-//
-//                // 1.5秒后自动重启
-//                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-//                    Intent intent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
-////                    Intent intent = activity.getPackageManager()
-////                            .getLaunchIntentForPackage(activity.getPackageName());
-//                    if (intent != null) {
-//                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP |
-//                                Intent.FLAG_ACTIVITY_NEW_TASK |
-//                                Intent.FLAG_ACTIVITY_CLEAR_TASK);
-//                        activity.startActivity(intent);
-//                        android.os.Process.killProcess(android.os.Process.myPid());
-//                    }
-//                }, 1500);
-//            });
-//        }
-//    }
-
-
-    private void restartApp() {
-        Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        if (intent != null) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                    Intent.FLAG_ACTIVITY_NEW_TASK |
-                    Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            android.os.Process.killProcess(android.os.Process.myPid());
-        }
-    }
-
 }

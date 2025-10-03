@@ -82,7 +82,6 @@
             android:spinnerMode="dropdown" />
     </androidx.appcompat.widget.LinearLayoutCompat>
 
-    <!-- 修复2: 将所有操作控件放入同一个容器 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/action_container"
         android:layout_width="match_parent"
@@ -98,6 +97,7 @@
                 android:text="@string/log"
                 android:textSize="16sp"
                 app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintTop_toTopOf="parent" android:layout_marginTop="2dp"/>
 
         <ProgressBar
@@ -110,6 +110,7 @@
             android:focusable="true"
             android:visibility="gone"
             app:layout_constraintEnd_toStartOf="@id/refresh"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.constraintlayout.utils.widget.ImageFilterButton
@@ -124,6 +125,7 @@
             android:src="@drawable/ic_baseline_refresh_24"
             android:tint="@color/purple_500"
             app:layout_constraintEnd_toStartOf="@id/copy"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.constraintlayout.utils.widget.ImageFilterButton
@@ -137,6 +139,7 @@
             android:scaleType="center"
             android:src="@drawable/ic_baseline_content_copy_24"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <ProgressBar
