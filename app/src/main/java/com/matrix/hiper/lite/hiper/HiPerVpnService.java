@@ -1,9 +1,7 @@
 package com.matrix.hiper.lite.hiper;
 
-import android.app.Activity;
-import android.app.AlertDialog;
+
 import android.app.NotificationManager;
-import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -20,20 +18,18 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Objects;
 
 import com.matrix.hiper.lite.MainActivity;
-import com.matrix.hiper.lite.R;
 import mobile.CIDR;
 
-import static com.matrix.hiper.lite.MainActivity.*;
 
 // import com.matrix.hiper.lite.utils.LogUtils;
 
 public class HiPerVpnService extends VpnService {
 
     private static String TAG = "VlanLite";
+    private Intent lastIntent; // 新增成员变量
 
     private static boolean running = false;
     private static Sites.Site site = null;
@@ -58,18 +54,24 @@ public class HiPerVpnService extends VpnService {
         HiPerVpnService.callback = callback;
     }
 
+    private boolean shouldRestartApp = true; // 添加实例变量
+
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        lastIntent = intent;
         if (intent == null) {
             stopSelf();
             return START_NOT_STICKY;
         }
-
+        // 检查是否需要重启应用（默认是true）
+        shouldRestartApp = intent.getBooleanExtra("restart_app", true);
         // 优化停止请求处理
         if (intent.hasExtra("stop") && intent.getBooleanExtra("stop", false)) {
             stopVpn();
-            return START_NOT_STICKY; // 确保正确返回
+            return START_NOT_STICKY;
         }
+
 //        if (intent.getExtras().getBoolean("stop")) {
 //            stopVpn();
 //            return Service.START_NOT_STICKY;
@@ -95,12 +97,6 @@ public class HiPerVpnService extends VpnService {
 
         return super.onStartCommand(intent, flags, startId);
     }
-
-//    @Override
-//    public void onDestroy() {
-//        stopVpn();
-//        super.onDestroy();
-//    }
 
     @Override
     public void onDestroy() {
@@ -164,20 +160,6 @@ public class HiPerVpnService extends VpnService {
             }
         }
 
-        // Add our dns resolvers
-        /*
-        for (String dnsResolver : site.getDnsResolvers()) {
-            builder.addDnsServer(dnsResolver);
-        }
-
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        for (Network network : connectivityManager.getAllNetworks()) {
-            for (InetAddress addresses : connectivityManager.getLinkProperties(network).getDnsServers()) {
-                builder.addDnsServer(addresses);
-            }
-        }
-
-         */
 
         vpnInterface = builder.establish();
         System.out.println(site.getConfig());
@@ -209,30 +191,35 @@ public class HiPerVpnService extends VpnService {
             }
         }).start();
     }
-
+    private static final String ACTION_SERVICE_STOPPED = "com.matrix.hiper.lite.SERVICE_STOPPED";
     private void stopVpn() {
         unregisterNetworkCallback();
         try {
-//            hiper.stop();
-            vpnInterface.close();
-            hiper.stop();
+            if (vpnInterface != null) {
+                vpnInterface.close();
+            }
+            if (hiper != null) {
+                hiper.stop();
+            }
         } catch (Throwable e) {
             e.printStackTrace();
-        }
-        running = false;
-        site = null;
-        announceExit(null);
-        if (getApplicationContext() != null) {
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                MainActivity.requestRestartNotification(getApplicationContext());
-            }, 2500);
-        }
-        stopSelf();
-//        stopSelf();
-    }
+        } finally {
+            // 使用lastIntent而不是getIntent()
+            if (lastIntent != null && lastIntent.getBooleanExtra("send_stop_broadcast", false)) {
+                Intent broadcastIntent = new Intent(ACTION_SERVICE_STOPPED);
+                sendBroadcast(broadcastIntent);
+            }
 
-
-    // Used to detect network changes (wifi -> cell or vice versa) and rebinds the udp socket/updates LH
+            running = false;
+            site = null;
+            announceExit(null);
+            if (shouldRestartApp && getApplicationContext() != null) {
+                new Handler(Looper.getMainLooper()).postDelayed(() ->
+                        MainActivity.requestRestartNotification(getApplicationContext()), 2500);
+            }
+            stopSelf();
+        }
+    }    // Used to detect network changes (wifi -> cell or vice versa) and rebinds the udp socket/updates LH
     private void registerNetworkCallback() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -249,6 +236,10 @@ public class HiPerVpnService extends VpnService {
             connectivityManager.unregisterNetworkCallback(networkCallback);
             isCallbackRegistered = false;
         }
+    }
+
+    public boolean isShouldRestartApp() {
+        return shouldRestartApp;
     }
 
     public class NetworkCallback extends ConnectivityManager.NetworkCallback {

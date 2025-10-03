@@ -28,4 +28,17 @@
     <string name="restart_required_title">Application Restart Required</string>
     <string name="restart_required_message">To ensure network connection stability, the application will restart automatically</string>
 
+    <!-- 添加日志级别标签和选项数组 -->
+    <string name="log_level">Log Level:</string>
+    <string-array name="log_levels">
+        <item>panic</item>
+        <item>fatal</item>
+        <item>error</item>
+        <item>warning</item>
+        <item>info</item>
+        <item>debug</item>
+        <item>trace</item>
+    </string-array>
+
+
 </resources>

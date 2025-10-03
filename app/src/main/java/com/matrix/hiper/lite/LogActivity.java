@@ -1,15 +1,11 @@
 package com.matrix.hiper.lite;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
+import android.content.*;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
-import android.widget.CompoundButton;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.*;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,6 +15,8 @@ import androidx.constraintlayout.utils.widget.ImageFilterButton;
 import androidx.core.text.PrecomputedTextCompat;
 import androidx.core.widget.TextViewCompat;
 
+import com.google.gson.Gson;
+import com.matrix.hiper.lite.hiper.HiPerVpnService;
 import com.matrix.hiper.lite.hiper.Setting;
 import com.matrix.hiper.lite.hiper.Sites;
 import com.matrix.hiper.lite.utils.StringUtils;
@@ -38,13 +36,26 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
     private ProgressBar copyProgress;
     private AppCompatTextView log;
 
+    private Sites.IncomingSite incomingSite;
+    private Spinner logLevelSpinner;
+    private boolean isRestarting = false;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_log);
-
         site = Sites.Site.fromFile(getApplicationContext(), getIntent().getExtras().getString("name"));
         logPath = site.getLogFile();
+
+        // 加载IncomingSite配置
+        String name = getIntent().getExtras().getString("name");
+        String configPath = getFilesDir().getAbsolutePath() + "/" + name + "/hiper_config.json";
+        String configJson = StringUtils.getStringFromFile(configPath);
+        if (configJson != null) {
+            incomingSite = new Gson().fromJson(configJson, Sites.IncomingSite.class);
+        } else {
+            incomingSite = new Sites.IncomingSite();
+        }
+
         setting = Setting.getSetting(this, site.getName());
 
         title = findViewById(R.id.title);
@@ -70,6 +81,157 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
         // 初始化状态
         copyProgress.setVisibility(View.GONE);
         copy.setOnClickListener(this);
+
+        isRestarting = false;
+
+        logLevelSpinner = findViewById(R.id.log_level_spinner);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.log_levels, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        logLevelSpinner.setAdapter(adapter);
+
+        // 修复：先移除监听器，设置值后再添加监听器
+        logLevelSpinner.setOnItemSelectedListener(null);
+
+        // 设置当前日志级别
+        String currentLogLevel = incomingSite.getLoggingLevel();
+        int position = adapter.getPosition(currentLogLevel);
+        if (position >= 0) {
+            logLevelSpinner.setSelection(position);
+        }
+
+        // 修复：添加防护 - 如果选择的日志级别与当前配置相同，则不触发更新
+        logLevelSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedLevel = parent.getItemAtPosition(position).toString();
+                // 防护：如果选择的日志级别与当前配置相同，则跳过
+                if (selectedLevel.equals(incomingSite.getLoggingLevel())) {
+                    return;
+                }
+                updateLogLevel(selectedLevel);
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Do nothing
+            }
+        });
+    }
+
+
+    private BroadcastReceiver stopReceiver = null; // 新增成员变量
+    private void updateLogLevel(String level) {
+        if (level.equals(incomingSite.getLoggingLevel())) {
+            runOnUiThread(() -> {
+                logLevelSpinner.setEnabled(true);
+                copy.setEnabled(true);
+                refresh.setEnabled(true);
+                isRestarting = false;
+            });
+            return;
+        }
+
+        // 防护2：防止重复操作
+        if (isRestarting) {
+            Toast.makeText(this, "Please wait for current operation to complete", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 2. 禁用UI控件防止重复点击
+        runOnUiThread(() -> {
+            logLevelSpinner.setEnabled(false);
+            copy.setEnabled(false);
+            refresh.setEnabled(false);
+        });
+        isRestarting = true;
+        String name = site.getName();
+
+        // 3. 更新配置并保存
+        incomingSite.setLoggingLevel(level);
+        String path = getFilesDir().getAbsolutePath() + "/" + name + "/hiper_config.json";
+        StringUtils.writeFile(path, new Gson().toJson(incomingSite));
+
+        Toast.makeText(this, "Log level updated to " + level, Toast.LENGTH_SHORT).show();
+        if (HiPerVpnService.isRunning(name)) {
+            IntentFilter filter = new IntentFilter("com.matrix.hiper.lite.SERVICE_STOPPED");
+            stopReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    unregisterReceiver(this);
+                    stopReceiver = null;
+                    startServiceWithDelay(name);
+                }
+            };
+            registerReceiver(stopReceiver, filter);
+
+            // 5. 发送停止命令（带服务停止广播）
+            Intent stopIntent = new Intent(this, HiPerVpnService.class);
+            Bundle bundle = new Bundle();
+            bundle.putBoolean("stop", true);
+            bundle.putBoolean("restart_app", false);
+            bundle.putBoolean("send_stop_broadcast", true);
+            stopIntent.putExtras(bundle);
+            startService(stopIntent);
+        } else {
+            // 6. 服务未运行时直接恢复UI
+            runOnUiThread(() -> {
+                logLevelSpinner.setEnabled(true);
+                copy.setEnabled(true);
+                refresh.setEnabled(true);
+                isRestarting = false;
+            });
+        }
+    }
+
+    private void startServiceWithDelay(String name) {
+        // 7. 增加延迟时间至 3000ms 确保Go运行时完全停止
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                // 8. 启动新服务
+                Intent startIntent = new Intent(this, HiPerVpnService.class);
+                Bundle startBundle = new Bundle();
+                startBundle.putString("name", name);
+                startBundle.putBoolean("restart_app", false);
+                startIntent.putExtras(startBundle);
+                startService(startIntent);
+
+                // 9. 添加服务启动确认
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    runOnUiThread(() -> {
+                        logLevelSpinner.setEnabled(true);
+                        copy.setEnabled(true);
+                        refresh.setEnabled(true);
+                        isRestarting = false;
+
+                        // 10. 刷新日志显示新配置
+                        refreshLog();
+                    });
+                }, 1000);
+            } catch (Exception e) {
+                e.printStackTrace();
+                // 11. 错误恢复
+                runOnUiThread(() -> {
+                    logLevelSpinner.setEnabled(true);
+                    copy.setEnabled(true);
+                    refresh.setEnabled(true);
+                    isRestarting = false;
+                    Toast.makeText(this, "Failed to restart service", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }, 3000); // 从1500ms增加到3000ms
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (stopReceiver != null) {
+            try {
+                unregisterReceiver(stopReceiver);
+            } catch (Exception e) {
+                // 忽略
+            }
+            stopReceiver = null;
+        }
     }
 
     @Override

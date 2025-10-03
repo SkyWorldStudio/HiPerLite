@@ -162,6 +162,15 @@ public class Sites {
         private SYNC sync;
         private LISTEN listen;
         private LOGGING logging;
+
+        public String getLoggingLevel() {
+            return logging.level;
+        }
+
+        public void setLoggingLevel(String level) {
+            this.logging = new LOGGING(level);
+        }
+
         @Expose(serialize = false)
         private String key;
 //        private String originalYaml;
@@ -374,7 +383,8 @@ public class Sites {
             HashMap<String, String> rawLogging = (HashMap<String, String>) object.get("logging");
             if (rawLogging == null) {
                 rawLogging = new HashMap<>();
-                rawLogging.put("level", "error");
+                // 没配置就改成info
+                rawLogging.put("level", "info");
             }
             LOGGING logging = new LOGGING(rawLogging.get("level"));
             object.putAll(additionObject);

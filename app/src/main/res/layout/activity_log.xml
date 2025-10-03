@@ -1,144 +1,175 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    >
+    android:layout_height="match_parent">
 
+    <!-- 保持不变的 Toolbar -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
-        app:layout_constraintTop_toTopOf="parent"
-        android:background="@color/purple_500"
-        app:titleTextColor="@color/white"
         android:layout_width="match_parent"
-        android:layout_height="?actionBarSize">
+        android:layout_height="?actionBarSize"
+        android:background="@color/purple_500"
+        app:layout_constraintTop_toTopOf="parent"
+        app:titleTextColor="@color/white">
 
         <TextView
             android:id="@+id/title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="@color/white"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
+            android:textColor="@color/white" />
     </androidx.appcompat.widget.Toolbar>
 
+    <!-- 保持不变的设置行 -->
     <androidx.appcompat.widget.LinearLayoutCompat
         android:id="@+id/setting"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="?attr/actionBarSize"
-        >
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
-            android:layout_marginStart="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:textSize="16sp"
-            android:text="@string/auto_update_point"/>
+            android:layout_marginStart="10dp"
+            android:text="@string/auto_update_point"
+            android:textSize="16sp" />
 
         <View
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_weight="1"/>
+            android:layout_weight="1" />
 
         <androidx.appcompat.widget.SwitchCompat
-            android:layout_gravity="center"
-            android:layout_marginEnd="10dp"
+            android:id="@+id/auto_update"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/auto_update"/>
-
+            android:layout_gravity="center"
+            android:layout_marginEnd="10dp" />
     </androidx.appcompat.widget.LinearLayoutCompat>
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- 修复1: 移除不必要的56dp边距 -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/log_level_setting"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/log"
-        android:textSize="16sp"
-        app:layout_constraintTop_toBottomOf="@+id/setting"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="10dp"
-        android:layout_marginTop="10dp"/>
-
-    <ProgressBar
-        android:visibility="gone"
-        android:clickable="true"
-        android:focusable="true"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:background="@drawable/image_button"
-        android:id="@+id/progress"
-        app:layout_constraintEnd_toStartOf="@id/refresh"
+        android:orientation="horizontal"
+        android:padding="10dp"
         app:layout_constraintTop_toBottomOf="@id/setting"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="10dp"/>
+        android:layout_marginTop="8dp"> <!-- 修复: 从56dp改为8dp -->
 
-    <androidx.constraintlayout.utils.widget.ImageFilterButton
-        android:clickable="true"
-        android:focusable="true"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:background="@drawable/image_button"
-        android:tint="@color/purple_500"
-        android:src="@drawable/ic_baseline_refresh_24"
-        android:scaleType="center"
-        android:id="@+id/refresh"
-        app:layout_constraintEnd_toStartOf="@id/copy"
-        app:layout_constraintTop_toBottomOf="@id/setting"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="10dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/log_level"
+            android:textSize="16sp" />
 
-    <androidx.constraintlayout.utils.widget.ImageFilterButton
-        android:clickable="true"
-        android:focusable="true"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:background="@drawable/image_button"
-        android:src="@drawable/ic_baseline_content_copy_24"
-        android:scaleType="center"
-        android:id="@+id/copy"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/setting"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="10dp"/>
-    
-    <!-- 在copy按钮同级位置添加 -->
-    <ProgressBar
-        android:id="@+id/copy_progress"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:indeterminateTint="?attr/colorPrimary"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/copy"
-        app:layout_constraintEnd_toEndOf="@id/copy"
-        app:layout_constraintStart_toStartOf="@id/copy"
-        app:layout_constraintTop_toTopOf="@id/copy" />
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
+        <Spinner
+            android:id="@+id/log_level_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:spinnerMode="dropdown" />
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
+    <!-- 修复2: 将所有操作控件放入同一个容器 -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/action_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/log_level_setting"
+        android:layout_marginTop="8dp">
+
+        <TextView
+                android:id="@+id/log_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="@string/log"
+                android:textSize="16sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" android:layout_marginTop="2dp"/>
+
+        <ProgressBar
+            android:id="@+id/progress"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/image_button"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@id/refresh"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.constraintlayout.utils.widget.ImageFilterButton
+            android:id="@+id/refresh"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/image_button"
+            android:clickable="true"
+            android:focusable="true"
+            android:scaleType="center"
+            android:src="@drawable/ic_baseline_refresh_24"
+            android:tint="@color/purple_500"
+            app:layout_constraintEnd_toStartOf="@id/copy"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.constraintlayout.utils.widget.ImageFilterButton
+            android:id="@+id/copy"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/image_button"
+            android:clickable="true"
+            android:focusable="true"
+            android:scaleType="center"
+            android:src="@drawable/ic_baseline_content_copy_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ProgressBar
+            android:id="@+id/copy_progress"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:indeterminateTint="?attr/colorPrimary"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/copy"
+            app:layout_constraintEnd_toEndOf="@id/copy"
+            app:layout_constraintStart_toStartOf="@id/copy"
+            app:layout_constraintTop_toTopOf="@id/copy" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 修复3: 修复日志区域 -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="160dp">
-
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/action_container">
         <androidx.appcompat.widget.LinearLayoutCompat
-            android:padding="10dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="10dp">
 
             <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/log"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:id="@+id/log"
-                android:textSize="11sp"/>
-
+                android:textSize="11sp" />
         </androidx.appcompat.widget.LinearLayoutCompat>
-
     </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

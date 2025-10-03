@@ -222,10 +222,12 @@ public class SiteListAdapter extends BaseAdapter {
             Intent intent = new Intent(context, HiPerVpnService.class);
             Bundle bundle = new Bundle();
             bundle.putBoolean("stop", true);
+            bundle.putBoolean("restart_app", true); // 用户主动暂停，需要重启应用
             intent.putExtras(bundle);
             activity.startService(intent);
             activity.refreshList();
         });
+
         viewHolder.delete.setOnClickListener(view1 -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle(context.getString(R.string.dialog_delete_title));
