@@ -168,40 +168,83 @@ public class HiPerVpnService extends VpnService {
         Handler handler = new Handler();
         new Thread(() -> {
             try {
-                // LogUtils.d(site.getConfig());
                 hiper = mobile.Mobile.newBulk(site.getConfig(), site.getLogFile(), vpnInterface.getFd());
                 handler.post(() -> {
-                    registerNetworkCallback();
-                    //TODO: There is an open discussion around sleep killing tunnels or just changing mobile to tear down stale tunnels
-                    //registerSleep()
-
-                    hiper.start();
-                    running = true;
-                    sendSimple(1);
+                    try {
+                        registerNetworkCallback();
+                        hiper.start();
+                        running = true;
+                        sendSimple(1);
+                    } catch (Exception e) {
+                        // 改进错误处理：更详细的错误信息
+                        String errorMsg = "Failed to start hiper: " + e.getMessage();
+                        Log.e(TAG, errorMsg, e);
+                        running = false;
+                        handler.post(() -> {
+                            try {
+                                if (vpnInterface != null) {
+                                    vpnInterface.close();
+                                }
+                            } catch (IOException ex) {
+                                Log.e(TAG, "Error closing VPN interface", ex);
+                            }
+                            hiper = null;
+                            // 传递更详细的错误信息
+                            announceExit("Connection failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+                            stopSelf();
+                        });
+                    }
                 });
             } catch (Exception e) {
-                Log.e(TAG, "Got an error " + e);
+                // 改进错误处理：更详细的错误信息
+                String errorMsg = "Got an error while initializing: " + e.getMessage();
+                Log.e(TAG, errorMsg, e);
+                running = false;
                 handler.post(() -> {
                     try {
-                        vpnInterface.close();
+                        if (vpnInterface != null) {
+                            vpnInterface.close();
+                        }
                     } catch (IOException ex) {
-                        ex.printStackTrace();
+                        Log.e(TAG, "Error closing VPN interface", ex);
                     }
-                    announceExit(e.toString());
+                    // 传递更详细的错误信息
+                    announceExit("Initialization failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
                 });
                 stopSelf();
             }
         }).start();
     }
+
     private static final String ACTION_SERVICE_STOPPED = "com.matrix.hiper.lite.SERVICE_STOPPED";
+
+
     private void stopVpn() {
+        // 修复4: 检查服务是否真正处于运行状态
+        if (!running) {
+            Log.w(TAG, "Attempted to stop VPN but it's not running");
+            stopSelf();
+            return;
+        }
+
         unregisterNetworkCallback();
+
+        // 修复5: 保存当前状态的引用，避免并发问题
+        mobile.Bulk currentHiper = hiper;
+        ParcelFileDescriptor currentVpnInterface = vpnInterface;
+
+        // 修复6: 先重置状态，再清理资源
+        running = false;
+        site = null;
+        hiper = null;
+        vpnInterface = null;
+
         try {
-            if (vpnInterface != null) {
-                vpnInterface.close();
+            if (currentVpnInterface != null) {
+                currentVpnInterface.close();
             }
-            if (hiper != null) {
-                hiper.stop();
+            if (currentHiper != null) {
+                currentHiper.stop();
             }
         } catch (Throwable e) {
             e.printStackTrace();

@@ -19,7 +19,7 @@
     <string name="dialog_add_new_instance_error_invalid">Invalid token!</string>
     <string name="dialog_add_new_instance_error_network">Failed to get configuration, please check your network and token!</string>
 
-    <string name="auto_update_point">Auto Update Configuration</string>
+    <string name="auto_update_point">Auto Update Configuration. About to be restarted...</string>
     <string name="log">Hiper Log</string>
     <string name="copy_success">Successfully copied!</string>
 
@@ -29,6 +29,11 @@
     <string name="restart_required_message">To ensure network connection stability, the application will restart automatically</string>
     
     <string name="restart_required_message_ing">Pausing Server...</string>
+
+    <string name="toast_log_update">Log level updated to </string>
+
+    <string name="toast_log_update_2"> The service may be restarted.</string>
+
 
     <!-- 添加日志级别标签和选项数组 -->
     <string name="log_level">Log Level:</string>

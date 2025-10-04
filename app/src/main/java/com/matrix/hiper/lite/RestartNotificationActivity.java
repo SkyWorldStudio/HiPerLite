@@ -17,7 +17,6 @@ public class RestartNotificationActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         if (isTaskRoot()) {
-            // 在显示通知前清除状态
             ConnectionStateManager.clearState(this);
 
             new AlertDialog.Builder(this)
@@ -26,8 +25,6 @@ public class RestartNotificationActivity extends Activity {
                     .setCancelable(false)
                     .show();
 
-
-            // 1.5秒后重启
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
                 if (intent != null) {

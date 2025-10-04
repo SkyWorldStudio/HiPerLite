@@ -144,14 +144,12 @@ public class SiteListAdapter extends BaseAdapter {
             if (!viewHolder.clickHandled.compareAndSet(false, true) || !view1.isEnabled()) {
                 return;
             }
-
             activity.runOnUiThread(() -> {
                 viewHolder.progress.setVisibility(View.VISIBLE);
                 view1.setEnabled(false);
                 viewHolder.delete.setEnabled(false);
             });
             new Thread(() -> {
-                boolean success = false;
                 try {
                     boolean autoUpdateEnabled = Setting.getSetting(context, site.getName()).isAutoUpdate();
                     if (autoUpdateEnabled) {
@@ -218,15 +216,20 @@ public class SiteListAdapter extends BaseAdapter {
                 }
             }).start();
         });
+        // 修改 cancel 按钮的点击处理
         viewHolder.cancel.setOnClickListener(view1 -> {
-            Intent intent = new Intent(context, HiPerVpnService.class);
-            Bundle bundle = new Bundle();
-            bundle.putBoolean("stop", true);
-            bundle.putBoolean("restart_app", true); // 用户主动暂停，需要重启应用
-            intent.putExtras(bundle);
-            activity.startService(intent);
+            // 修复7: 增加额外检查，只在服务真正运行时发送停止命令
+            if (HiPerVpnService.isRunning(site.getName())) {
+                Intent intent = new Intent(context, HiPerVpnService.class);
+                Bundle bundle = new Bundle();
+                bundle.putBoolean("stop", true);
+                bundle.putBoolean("restart_app", true);
+                intent.putExtras(bundle);
+                activity.startService(intent);
+            }
             activity.refreshList();
         });
+
 
         viewHolder.delete.setOnClickListener(view1 -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);

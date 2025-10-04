@@ -152,7 +152,8 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
         String path = getFilesDir().getAbsolutePath() + "/" + name + "/hiper_config.json";
         StringUtils.writeFile(path, new Gson().toJson(incomingSite));
 
-        Toast.makeText(this, "Log level updated to " + level, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.toast_log_update) + level + getString(R.string.toast_log_update_2), Toast.LENGTH_SHORT).show();
+
         if (HiPerVpnService.isRunning(name)) {
             // 新增：保存待连接状态，确保重启后能自动重连
             ConnectionStateManager.savePendingConnection(this, name);
@@ -206,45 +207,6 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
         }, 1500); // 1.5秒延迟 - 让Toast先显示
     }
 
-
-//    private void startServiceWithDelay(String name) {
-//        // 7. 增加延迟时间至 3000ms 确保Go运行时完全停止
-//        Toast.makeText(this, R.string.restart_required_message_ing, Toast.LENGTH_LONG).show();
-//        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-//            try {
-//                // 8. 启动新服务
-//                Intent startIntent = new Intent(this, HiPerVpnService.class);
-//                Bundle startBundle = new Bundle();
-//                startBundle.putString("name", name);
-//                startBundle.putBoolean("restart_app", false);
-//                startIntent.putExtras(startBundle);
-//                startService(startIntent);
-//
-//                // 9. 添加服务启动确认
-//                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-//                    runOnUiThread(() -> {
-//                        logLevelSpinner.setEnabled(true);
-//                        copy.setEnabled(true);
-//                        refresh.setEnabled(true);
-//                        isRestarting = false;
-//
-//                        // 10. 刷新日志显示新配置
-//                        refreshLog();
-//                    });
-//                }, 1000);
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//                // 11. 错误恢复
-//                runOnUiThread(() -> {
-//                    logLevelSpinner.setEnabled(true);
-//                    copy.setEnabled(true);
-//                    refresh.setEnabled(true);
-//                    isRestarting = false;
-//                    Toast.makeText(this, "Failed to restart service", Toast.LENGTH_SHORT).show();
-//                });
-//            }
-//        }, 1500); // 从1500ms增加到3000ms
-//    }
 
     @Override
     protected void onDestroy() {

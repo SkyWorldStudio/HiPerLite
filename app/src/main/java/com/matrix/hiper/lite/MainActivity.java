@@ -143,13 +143,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private String activeServiceName = null;
+    // 修改 onActivityResult 方法
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == START_HIPER_CODE && resultCode == Activity.RESULT_OK && name != null) {
-            // ✅ 连接成功后清除待连接状态
             ConnectionStateManager.clearState(this);
-
             activeServiceName = name;
             Intent intent = new Intent(this, HiPerVpnService.class);
 
@@ -157,9 +156,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 @Override
                 public void run(int code) {
                     System.out.println(code == 1 ? "success" : "failed");
-                    refreshList();
+                    // 修复8: 仅在成功启动后刷新列表
+                    if (code == 1) {
+                        refreshList();
+                    }
                 }
-
                 @Override
                 public void onExit(String error) {
                     if (error != null) {
@@ -169,14 +170,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         builder.setPositiveButton("OK", null);
                         builder.create().show();
                     }
-                    // 关键修复：无论是否出错，都刷新列表重置按钮状态
-                    refreshList();
+                    // 修复9: 无论是否出错都刷新列表，但确保状态正确
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        refreshList();
+                    }, 500);
                 }
             });
+
+            // 添加缺失的bundle和startService调用
             Bundle bundle = new Bundle();
             bundle.putString("name", name);
             intent.putExtras(bundle);
-            startService(intent);
+            startService(intent); // 关键修复：启动服务
         }
         super.onActivityResult(requestCode, resultCode, data);
     }

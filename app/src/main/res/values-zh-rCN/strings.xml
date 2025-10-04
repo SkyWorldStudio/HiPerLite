@@ -28,4 +28,11 @@
     <string name="auto_update_invalid_url">注意：此配置的同步URL格式无效</string>
     <string name="restart_required_title">应用需要重启</string>
     <string name="restart_required_message">为了确保网络连接正常，应用将自动重启</string>
+    
+    <string name="restart_required_message_ing">正在暂停服务</string>
+    <string name="toast_log_update">日志等级已更改为 </string>
+    <string name="toast_log_update_2">服务可能会重启</string>
+    <string name="log_level">日志等级:</string>
+
+
 </resources>
