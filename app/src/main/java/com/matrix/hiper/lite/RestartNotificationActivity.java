@@ -17,7 +17,7 @@ public class RestartNotificationActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         if (isTaskRoot()) {
-            ConnectionStateManager.clearState(this);
+//            ConnectionStateManager.clearState(this);
 
             new AlertDialog.Builder(this)
                     .setTitle(R.string.restart_required_title)

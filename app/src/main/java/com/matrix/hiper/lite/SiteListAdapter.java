@@ -1,15 +1,19 @@
+// File: app\src\main\java\com\matrix\hiper\lite\SiteListAdapter.java
 package com.matrix.hiper.lite;
 
 import static android.app.Activity.RESULT_OK;
 
 import static android.webkit.URLUtil.isValidUrl;
 import static com.matrix.hiper.lite.MainActivity.START_HIPER_CODE;
+import static java.security.AccessController.getContext;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.net.VpnService;
 import android.os.Bundle;
@@ -90,6 +94,9 @@ public class SiteListAdapter extends BaseAdapter {
     public long getItemId(int i) {
         return 0;
     }
+
+    private BroadcastReceiver stopReceiver = null; // 新增成员变量
+
 
     @Override
     public View getView(int i, View view, ViewGroup viewGroup) {
@@ -183,17 +190,42 @@ public class SiteListAdapter extends BaseAdapter {
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
                         }
                     }
+
+                    // 修改开始：实现待启动逻辑
                     activity.runOnUiThread(() -> {
                         boolean foundRunning = false;
                         for (Sites.Site si : list) {
                             if (HiPerVpnService.isRunning(si.getName())) {
-                                // ... 停止现有连接 ...
+                                // 先设置新配置为待启动状态
+
+                                Toast.makeText(context, site.getName(), Toast.LENGTH_SHORT).show();
+
+                                ConnectionStateManager.savePendingConnection(context, site.getName());
                                 activity.refreshList();
+
                                 foundRunning = true;
+                                Intent stopIntent = new Intent(context, HiPerVpnService.class);
+                                Bundle bundle = new Bundle();
+                                bundle.putBoolean("stop", true);
+                                bundle.putBoolean("restart_app", true);
+                                bundle.putBoolean("send_stop_broadcast", true);
+                                stopIntent.putExtras(bundle);
+                                context.startService(stopIntent); // 触发onStartCommand
+//                                HiPerVpnService.stopVpn(context, true, true);
+
+
+//                                Intent stopIntent = new Intent(context, HiPerVpnService.class);
+//                                Bundle bundle = new Bundle();
+//                                bundle.putBoolean("stop", true);
+//                                bundle.putBoolean("restart_app", true);
+//                               bundle.putBoolean("send_stop_broadcast", true);
+//                                stopIntent.putExtras(bundle);
+//                                startService(stopIntent);
                                 break;
                             }
                         }
                         if (!foundRunning) {
+                            // 没有运行中的配置，直接启动新配置
                             activity.setName(site.getName());
                             Intent vpnPrepareIntent = VpnService.prepare(context);
                             if (vpnPrepareIntent != null) {
@@ -203,6 +235,7 @@ public class SiteListAdapter extends BaseAdapter {
                             }
                         }
                     });
+                    // 修改结束
                 } catch (IOException e) {
                     e.printStackTrace();
                     activity.runOnUiThread(() -> {

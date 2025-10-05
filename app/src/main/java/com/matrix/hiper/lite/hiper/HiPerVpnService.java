@@ -35,14 +35,26 @@ public class HiPerVpnService extends VpnService {
 
     private static boolean running = false;
     private static Sites.Site site = null;
-    private static mobile.Bulk hiper = null;
-    private static ParcelFileDescriptor vpnInterface = null;
-    private NetworkCallback networkCallback = new NetworkCallback();
-    private boolean didSleep = false;
-    private NotificationManager notificationManager;
-    private boolean isCallbackRegistered = false;
-
-    private static HiPerCallback callback;
+    private mobile.Bulk hiper = null;
+    private static HiPerVpnService instance = null;
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        instance = this;
+    }
+//    @Override
+//    public void onDestroy() {
+//        super.onDestroy();
+//        if (instance == this) instance = null;
+//    }
+//    public static boolean isRunning(String name) {
+//        return instance != null && instance.running &&
+//                instance.site != null &&
+//                name.equals(instance.site.getName());
+//    }
+//    public static Sites.Site getSite() {
+//        return instance != null ? instance.site : null;
+//    }
 
     public static boolean isRunning(String name) {
         return (site != null && running && Objects.equals(name, site.getName()));
@@ -51,6 +63,15 @@ public class HiPerVpnService extends VpnService {
     public static Sites.Site getSite() {
         return site;
     }
+
+    private static ParcelFileDescriptor vpnInterface = null;
+    private NetworkCallback networkCallback = new NetworkCallback();
+    private boolean didSleep = false;
+    private NotificationManager notificationManager;
+    private boolean isCallbackRegistered = false;
+
+    private static HiPerCallback callback;
+
 
     public static void setHiPerCallback(HiPerCallback callback) {
         HiPerVpnService.callback = callback;
@@ -129,6 +150,7 @@ public class HiPerVpnService extends VpnService {
         }
         super.onDestroy();
     }
+
     private void startVpn() {
         CIDR ipNet;
 

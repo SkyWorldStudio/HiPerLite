@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             onActivityResult(START_HIPER_CODE, Activity.RESULT_OK, null);
                         }
                     }
-                    ConnectionStateManager.clearState(this);
+//                    ConnectionStateManager.clearState(this);
                 }, 500);
             } else {
                 // 站点已被删除，清除状态
