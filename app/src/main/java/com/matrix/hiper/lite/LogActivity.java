@@ -91,7 +91,7 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         logLevelSpinner.setAdapter(adapter);
 
-        // 修复：先移除监听器，设置值后再添加监听器
+        // 先移除监听器，设置值后再添加监听器
         logLevelSpinner.setOnItemSelectedListener(null);
 
         // 设置当前日志级别
@@ -101,12 +101,12 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
             logLevelSpinner.setSelection(position);
         }
 
-        // 修复：添加防护 - 如果选择的日志级别与当前配置相同，则不触发更新
+        // 如果选择的日志级别与当前配置相同，则不触发更新
         logLevelSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selectedLevel = parent.getItemAtPosition(position).toString();
-                // 防护：如果选择的日志级别与当前配置相同，则跳过
+                // 如果选择的日志级别与当前配置相同，则跳过
                 if (selectedLevel.equals(incomingSite.getLoggingLevel())) {
                     return;
                 }
@@ -120,7 +120,7 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
     }
 
 
-    private BroadcastReceiver stopReceiver = null; // 新增成员变量
+    private BroadcastReceiver stopReceiver = null;
     private void updateLogLevel(String level) {
         if (level.equals(incomingSite.getLoggingLevel())) {
             runOnUiThread(() -> {
@@ -132,13 +132,13 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
             return;
         }
 
-        // 防护2：防止重复操作
+        // 防止重复操作
         if (isRestarting) {
             Toast.makeText(this, "Please wait for current operation to complete", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // 2. 禁用UI控件防止重复点击
+        // 禁用UI控件防止重复点击
         runOnUiThread(() -> {
             logLevelSpinner.setEnabled(false);
             copy.setEnabled(false);
@@ -151,7 +151,7 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
 //        Toast.makeText(this, site.getName(), Toast.LENGTH_SHORT).show();
 
 
-        // 3. 更新配置并保存
+        // 更新配置并保存
         incomingSite.setLoggingLevel(level);
         String path = getFilesDir().getAbsolutePath() + "/" + name + "/hiper_config.json";
         StringUtils.writeFile(path, new Gson().toJson(incomingSite));
@@ -159,7 +159,7 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
         Toast.makeText(this, getString(R.string.toast_log_update) + level + getString(R.string.toast_log_update_2), Toast.LENGTH_SHORT).show();
 
         if (HiPerVpnService.isRunning(name)) {
-            // 新增：保存待连接状态，确保重启后能自动重连
+            // 保存待连接状态，确保重启后能自动重连
             ConnectionStateManager.savePendingConnection(this, name);
 
             IntentFilter filter = new IntentFilter("com.matrix.hiper.lite.SERVICE_STOPPED");
@@ -173,7 +173,7 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
             };
             registerReceiver(stopReceiver, filter);
 
-            // 5. 发送停止命令（带服务停止广播）
+            // 发送停止命令（带服务停止广播）
             Intent stopIntent = new Intent(this, HiPerVpnService.class);
             Bundle bundle = new Bundle();
             bundle.putBoolean("stop", true);
@@ -193,10 +193,8 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
     }
 
     private void startServiceWithDelay(String name) {
-        // 1. 先显示"Pausing Server..." Toast
         Toast.makeText(this, R.string.restart_required_message_ing, Toast.LENGTH_LONG).show();
 
-        // 2. 关键修改：不尝试重启服务，而是直接准备重启应用
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             // 3. 确保Toast有足够时间显示（LENGTH_LONG约3500ms）
             MainActivity.requestRestartNotification(this);
@@ -228,7 +226,6 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        // 1111
         if (hasFocus) {
 //            getWindow().getDecorView().setSystemUiVisibility(
 //                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE

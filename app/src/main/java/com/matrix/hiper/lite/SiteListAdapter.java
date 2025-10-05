@@ -1,25 +1,16 @@
 // File: app\src\main\java\com\matrix\hiper\lite\SiteListAdapter.java
 package com.matrix.hiper.lite;
 
-import static android.app.Activity.RESULT_OK;
-
-import static android.webkit.URLUtil.isValidUrl;
 import static com.matrix.hiper.lite.MainActivity.START_HIPER_CODE;
-import static java.security.AccessController.getContext;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
 import android.net.VpnService;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -60,11 +51,6 @@ public class SiteListAdapter extends BaseAdapter {
         this.list = list;
     }
 
-    private boolean isValidUrl(String url) {
-        if (url == null || url.trim().isEmpty()) return false;
-        url = url.trim();
-        return url.startsWith("http://") || url.startsWith("https://");
-    }
 
     private static class ViewHolder {
         ConstraintLayout parent;
@@ -213,16 +199,7 @@ public class SiteListAdapter extends BaseAdapter {
                                 bundle.putBoolean("send_stop_broadcast", true);
                                 stopIntent.putExtras(bundle);
                                 context.startService(stopIntent); // 触发onStartCommand
-//                                HiPerVpnService.stopVpn(context, true, true);
 
-
-//                                Intent stopIntent = new Intent(context, HiPerVpnService.class);
-//                                Bundle bundle = new Bundle();
-//                                bundle.putBoolean("stop", true);
-//                                bundle.putBoolean("restart_app", true);
-//                               bundle.putBoolean("send_stop_broadcast", true);
-//                                stopIntent.putExtras(bundle);
-//                                startService(stopIntent);
                                 break;
                             }
                         }
@@ -251,9 +228,9 @@ public class SiteListAdapter extends BaseAdapter {
                 }
             }).start();
         });
-        // 修改 cancel 按钮的点击处理
+
         viewHolder.cancel.setOnClickListener(view1 -> {
-            // 修复7: 增加额外检查，只在服务真正运行时发送停止命令
+            // 只在服务真正运行时发送停止命令
             if (HiPerVpnService.isRunning(site.getName())) {
                 Intent intent = new Intent(context, HiPerVpnService.class);
                 Bundle bundle = new Bundle();

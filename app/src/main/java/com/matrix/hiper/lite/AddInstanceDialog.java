@@ -31,7 +31,7 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
     public AddInstanceDialog(@NonNull Context context, AddInstanceCallback callback) {
         super(context);
         setContentView(R.layout.dialog_add_instance);
-        // 修复1: 允许通过返回键关闭对话框
+        // 允许通过返回键关闭对话框
         setCancelable(true);
         this.callback = callback;
         this.handler = new Handler();
@@ -47,9 +47,8 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
 
     @Override
     public void onClick(View view) {
-        // 修复2: 正确处理两个按钮的点击事件
         if (view == positive) {
-            // 强化连电保护
+            // 强化连点保护
             positive.setEnabled(false);
             negative.setEnabled(false);
             errorText.setVisibility(View.GONE);
@@ -87,7 +86,7 @@ public class AddInstanceDialog extends Dialog implements View.OnClickListener {
                 }
             }).start();
         }
-        // 修复3: 正确处理取消按钮点击
+        // 处理取消按钮点击
         else if (view == negative) {
             dismiss();
         }

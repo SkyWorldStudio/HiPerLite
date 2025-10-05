@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// import com.matrix.hiper.lite.utils.LogUtils;
 
 @SuppressWarnings("ALL")
 public class Sites {
@@ -78,9 +77,6 @@ public class Sites {
         private final String cert;
         private final String key;
 
-        public PKI() {
-            this("", "", "");
-        }
 
         public PKI(String ca, String cert, String key) {
             this.ca = ca;
@@ -173,7 +169,7 @@ public class Sites {
 
         @Expose(serialize = false)
         private String key;
-//        private String originalYaml;
+
         public IncomingSite() {
             this("", "", new HashMap<>(), new ArrayList<>(), new ArrayList<>(), "", "", 0, 0, 0, "", 0, "", "", new SYNC(), new LISTEN(), new LOGGING());
         }
@@ -200,17 +196,7 @@ public class Sites {
             this.logging = logging;
         }
 
-        public void setPoint(HashMap<String, ArrayList<String>> point) {
-            this.points = point;
-        }
 
-        public void setDnsResolvers(ArrayList<String> dnsResolvers) {
-            this.dnsResolvers = dnsResolvers;
-        }
-
-        public void setKey(String key) {
-            this.key = key;
-        }
 
         public String getName() {
             return name;
@@ -230,11 +216,6 @@ public class Sites {
 
         public ArrayList<String> getDnsResolvers() {
             return dnsResolvers;
-        }
-
-
-        public String getCert() {
-            return cert;
         }
 
         public String getCa() {
@@ -269,9 +250,6 @@ public class Sites {
             return sync.addition;
         }
 
-        public String getSyncSource() {
-            return sync.source;
-        }
 
         public void save(Context context) {
             String path = context.getFilesDir().getAbsolutePath() + "/" + name + "/hiper_config.json";
@@ -302,7 +280,6 @@ public class Sites {
 
                         ArrayList<String> valueList = new ArrayList<>();
                         if (value instanceof List) {
-                            // 修复：这里将循环变量名改为 listItem
                             for (Object listItem : (List<?>) value) {
                                 if (listItem instanceof String) {
                                     valueList.add((String) listItem);
@@ -326,7 +303,6 @@ public class Sites {
             ArrayList<String> newDns = new ArrayList<>();
             if (dnsObj != null) {
                 if (dnsObj instanceof List) {
-                    // 修复：这里将循环变量名改为 dnsItem
                     for (Object dnsItem : (List<?>) dnsObj) {
                         if (dnsItem instanceof String) {
                             newDns.add((String) dnsItem);
@@ -394,9 +370,7 @@ public class Sites {
             String key = pki.get("key");
 
 
-//            HashMap<String, ArrayList<String>> rawPoint = (HashMap<String, ArrayList<String>>) object.get("points");
-//            ArrayList<String> dns = (ArrayList<String>) object.get("dns");
-            // 安全处理points字段 - 修复关键点
+            // 安全处理points字段
             HashMap<String, ArrayList<String>> rawPoint = new HashMap<>();
             Object pointsObj = object.get("points");
 
@@ -542,9 +516,6 @@ public class Sites {
             return id;
         }
 
-        public HashMap<String, ArrayList<String>> getPoint() {
-            return points;
-        }
 
         public ArrayList<UnsafeRoute> getUnsafeRoutes() {
             return unsafeRoutes;
@@ -615,7 +586,7 @@ public class Sites {
         public static Site fromFile(Context context, String name) {
             String dirPath = context.getFilesDir().getAbsolutePath() + "/" + name;
 
-            // ✅ 修正16: 优先检查YAML是否存在
+            // 优先检查YAML是否存在
             String yamlPath = dirPath + "/config.yml";
             if (!new File(yamlPath).exists()) {
                 // 尝试从旧JSON恢复
@@ -644,7 +615,7 @@ public class Sites {
                 }
             }
 
-            // ✅ 修正17: 原有逻辑保持不变
+
             String path = dirPath + "/hiper_config.json";
             String s = StringUtils.getStringFromFile(path);
             if (s == null) return null;

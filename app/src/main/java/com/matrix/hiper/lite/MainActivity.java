@@ -4,7 +4,6 @@ import android.content.Context;
 import android.net.VpnService;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Toolbar;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.utils.widget.ImageFilterButton;
@@ -39,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void handlePendingConnection() {
         String pendingSite = ConnectionStateManager.getPendingSite(this);
         if (pendingSite != null) {
-            // ✅ 清除状态前先验证站点是否存在
+            // 清除状态前先验证站点是否存在
             boolean siteExists = false;
             String[] ids = new File(getFilesDir().getAbsolutePath()).list();
             if (ids != null) {
@@ -55,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setName(pendingSite);
 
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    // ✅ 添加额外检查：确保没有其他VPN正在运行
+                    // 确保没有其他VPN正在运行
                     boolean anyRunning = false;
                     for (Sites.Site site : Sites.Site.loadAll(this)) {
                         if (HiPerVpnService.isRunning(site.getName())) {
@@ -100,28 +99,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         refreshList();
     }
 
-//    @Override
-//    protected void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
-//
-//        // 移除所有Toolbar相关代码
-//        findViewById(R.id.add_new_instance).setOnClickListener(this);
-//        findViewById(R.id.refresh).setOnClickListener(this);
-//
-//        instanceListView = findViewById(R.id.instance_list);
-//        refreshList();
-//    }
 
-
-    public String getName() {
-        return name;
-    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // ✅ 新增: 清理引用防止内存泄漏
+        // 清理引用防止内存泄漏
         if (instance == this) {
             instance = null;
         }
@@ -143,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private String activeServiceName = null;
-    // 修改 onActivityResult 方法
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -186,9 +169,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    public boolean isServiceRunning(String siteName) {
-        return activeServiceName != null && activeServiceName.equals(siteName);
-    }
 
     @Override
     public void onClick(View view) {

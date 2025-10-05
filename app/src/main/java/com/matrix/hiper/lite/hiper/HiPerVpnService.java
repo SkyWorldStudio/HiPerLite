@@ -26,12 +26,11 @@ import com.matrix.hiper.lite.R;
 import mobile.CIDR;
 
 
-// import com.matrix.hiper.lite.utils.LogUtils;
 
 public class HiPerVpnService extends VpnService {
 
     private static String TAG = "VlanLite";
-    private Intent lastIntent; // 新增成员变量
+    private Intent lastIntent;
 
     private static boolean running = false;
     private static Sites.Site site = null;
@@ -42,27 +41,11 @@ public class HiPerVpnService extends VpnService {
         super.onCreate();
         instance = this;
     }
-//    @Override
-//    public void onDestroy() {
-//        super.onDestroy();
-//        if (instance == this) instance = null;
-//    }
-//    public static boolean isRunning(String name) {
-//        return instance != null && instance.running &&
-//                instance.site != null &&
-//                name.equals(instance.site.getName());
-//    }
-//    public static Sites.Site getSite() {
-//        return instance != null ? instance.site : null;
-//    }
 
     public static boolean isRunning(String name) {
         return (site != null && running && Objects.equals(name, site.getName()));
     }
 
-    public static Sites.Site getSite() {
-        return site;
-    }
 
     private static ParcelFileDescriptor vpnInterface = null;
     private NetworkCallback networkCallback = new NetworkCallback();
@@ -94,11 +77,6 @@ public class HiPerVpnService extends VpnService {
             stopVpn();
             return START_NOT_STICKY;
         }
-
-//        if (intent.getExtras().getBoolean("stop")) {
-//            stopVpn();
-//            return Service.START_NOT_STICKY;
-//        }
 
 
         if (running) {

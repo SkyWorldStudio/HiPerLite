@@ -6,9 +6,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
-import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
-import com.matrix.hiper.lite.utils.ConnectionStateManager;
+
 
 public class RestartNotificationActivity extends Activity {
 
@@ -34,7 +33,7 @@ public class RestartNotificationActivity extends Activity {
                     startActivity(intent);
                 }
                 finishAndRemoveTask(); // 先关闭当前Activity
-                android.os.Process.killProcess(android.os.Process.myPid());
+//                android.os.Process.killProcess(android.os.Process.myPid());
             }, 1500);
         } else {
             finish(); // 避免重复创建
