@@ -87,15 +87,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@id/log_level_setting"
-            android:layout_marginTop="8dp" android:padding="10dp" android:orientation="horizontal">
+            android:layout_marginTop="8dp" android:padding="10dp">
 
+        <!-- 修复: 为TextView添加垂直约束 -->
         <TextView
+                android:id="@+id/log_label2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/log"
-                android:textSize="16sp" android:id="@+id/log_label2" tools:layout_editor_absoluteY="10dp"
-                android:layout_gravity="left" app:layout_constraintStart_toStartOf="parent"
-        />
+                android:textSize="16sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
         <ProgressBar
                 android:id="@+id/progress"
                 android:layout_width="32dp"
@@ -105,8 +109,8 @@
                 android:focusable="true"
                 android:visibility="gone"
                 app:layout_constraintEnd_toStartOf="@id/refresh"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toTopOf="parent"/>
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
         <androidx.constraintlayout.utils.widget.ImageFilterButton
                 android:id="@+id/refresh"
@@ -120,8 +124,8 @@
                 android:src="@drawable/ic_baseline_refresh_24"
                 android:tint="@color/purple_500"
                 app:layout_constraintEnd_toStartOf="@id/copy"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toTopOf="parent"/>
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
         <androidx.constraintlayout.utils.widget.ImageFilterButton
                 android:id="@+id/copy"
@@ -134,8 +138,8 @@
                 android:scaleType="center"
                 android:src="@drawable/ic_baseline_content_copy_24"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toTopOf="parent"/>
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
         <ProgressBar
                 android:id="@+id/copy_progress"
