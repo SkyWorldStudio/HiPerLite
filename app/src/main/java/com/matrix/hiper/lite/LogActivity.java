@@ -147,8 +147,8 @@ public class LogActivity extends AppCompatActivity implements CompoundButton.OnC
         isRestarting = true;
         String name = site.getName();
 
-
-        Toast.makeText(this, site.getName(), Toast.LENGTH_SHORT).show();
+//        debug
+//        Toast.makeText(this, site.getName(), Toast.LENGTH_SHORT).show();
 
 
         // 3. 更新配置并保存

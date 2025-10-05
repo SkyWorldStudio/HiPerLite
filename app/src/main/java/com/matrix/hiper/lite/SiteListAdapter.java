@@ -198,7 +198,9 @@ public class SiteListAdapter extends BaseAdapter {
                             if (HiPerVpnService.isRunning(si.getName())) {
                                 // 先设置新配置为待启动状态
 
-                                Toast.makeText(context, site.getName(), Toast.LENGTH_SHORT).show();
+//                                debug
+//                                Toast.makeText(context, site.getName(), Toast.LENGTH_SHORT).show();
+                                Toast.makeText(context, context.getString(R.string.restart_change), Toast.LENGTH_SHORT).show();
 
                                 ConnectionStateManager.savePendingConnection(context, site.getName());
                                 activity.refreshList();

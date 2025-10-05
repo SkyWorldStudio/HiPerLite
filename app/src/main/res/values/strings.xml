@@ -30,9 +30,11 @@
     
     <string name="restart_required_message_ing">Pausing Server...</string>
 
-    <string name="toast_log_update">Log level updated to </string>
+    <string name="toast_log_update">Log level updated to:</string>
 
-    <string name="toast_log_update_2"> The service may be restarted.</string>
+    <string name="toast_log_update_2">. The service may be restarted.</string>
+
+    <string name="restart_change">The service may undergo a restart.</string>
 
 
     <!-- 添加日志级别标签和选项数组 -->
